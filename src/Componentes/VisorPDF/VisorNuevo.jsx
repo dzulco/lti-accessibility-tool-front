@@ -53,7 +53,8 @@ export default function VisorAccesibleLTI() {
           setErrorPlataforma(null);
           try {
               const urlMoodleEncodada = encodeURIComponent(studentData.pdfUrl);
-              const urlTuApi = `/api/v1/view?fileUrl=${urlMoodleEncodada}`;
+              const baseUrl = import.meta.env.VITE_BACKEND_URL || ''; 
+              const urlTuApi = `${baseUrl}/api/v1/view?fileUrl=${urlMoodleEncodada}`; // <--- Ahora sí usa la variable
 
               const res = await fetch(urlTuApi);
               if (!res.ok) throw new Error(`Error de red: servidor respondió con estado ${res.status}`);

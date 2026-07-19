@@ -70,7 +70,7 @@ export default function VisorAccesibleLTI() {
                       const jsonError = JSON.parse(textoRespuesta);
                       throw new Error(jsonError.error || "Error devuelto por la plataforma de estudio.");
                   } catch (e) {
-                      throw new Error("El servidor no envió un documento válido.");
+                      throw new Error("El servidor no envio un documento válido.");
                   }
               }
 

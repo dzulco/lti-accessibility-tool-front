@@ -90,7 +90,7 @@ export const PdfProvider = ({ children }) => {
             const urlMoodleEncodada = encodeURIComponent(url);
             const baseUrl = import.meta.env.VITE_BACKEND_URL || ''; 
             const urlTuApi = `${baseUrl}/api/v1/view?fileUrl=${urlMoodleEncodada}`; 
-         
+         	const res = await fetch(urlTuApi);
             if (!res.ok) throw new Error("Error al obtener el PDF");
 
             const arrayBuffer = await res.arrayBuffer();

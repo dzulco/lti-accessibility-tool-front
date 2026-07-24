@@ -87,7 +87,7 @@ export const PdfProvider = ({ children }) => {
         setCargando(true);
         setError(null);
         try {
-            const urlMoodleEncodada = encodeURIComponent(studentData.pdfUrl);
+            const urlMoodleEncodada = encodeURIComponent(url);
             const baseUrl = import.meta.env.VITE_BACKEND_URL || ''; 
             const urlTuApi = `${baseUrl}/api/v1/view?fileUrl=${urlMoodleEncodada}`; 
          

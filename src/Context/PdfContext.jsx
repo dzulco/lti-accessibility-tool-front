@@ -119,19 +119,15 @@ const enviarDatoTitleAndSections = async (textoDirecto) => {
 
     const textoAEnviar = textoDirecto || pdfData;
 
-    console.log("PDF enviado:", textoAEnviar?.substring(0, 80));
-
     if (!textoAEnviar || textoAEnviar.trim() === "") {
-        console.error("Texto vacío.");
+        console.error("El texto del PDF está vacío.");
         return;
     }
 
     try {
 
         const baseUrl = import.meta.env.VITE_BACKEND_URL || "";
-        const url = `${baseUrl}/api/v1/titleAndSections`;
-
-        const response = await fetch(url, {
+        const response = await fetch(`${baseUrl}/api/v1/titleAndSections`, {
             method: "POST",
             headers: {
                 "Content-Type": "text/plain; charset=utf-8"
@@ -140,13 +136,13 @@ const enviarDatoTitleAndSections = async (textoDirecto) => {
         });
 
         if (!response.ok) {
-            throw new Error("Error del servidor");
+            throw new Error("Error en la respuesta del servidor");
         }
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder("utf-8");
 
-        let jsonAcumulado = "";
+        let respuesta = "";
 
         while (true) {
 
@@ -156,11 +152,13 @@ const enviarDatoTitleAndSections = async (textoDirecto) => {
 
             const chunk = decoder.decode(value, { stream: true });
 
-            jsonAcumulado += chunk;
+            respuesta += chunk;
 
-            // Streaming de título
-            const titulo = jsonAcumulado.match(/"titulo"\s*:\s*"([^"]+)"/);
+            // Limpiar únicamente el prefijo SSE para poder buscar
+            const parcial = respuesta.replace(/^data:\s*/gm, "");
 
+            // Mostrar título en tiempo real
+            const titulo = parcial.match(/"titulo"\s*:\s*"([^"]+)"/);
             if (titulo) {
                 setResultadoTitleAndSections(prev => ({
                     ...prev,
@@ -168,42 +166,22 @@ const enviarDatoTitleAndSections = async (textoDirecto) => {
                 }));
             }
 
-            // Streaming de subtítulo
-            const subtitulo = jsonAcumulado.match(/"subtitulo"\s*:\s*"([^"]+)"/);
-
+            // Mostrar subtítulo en tiempo real
+            const subtitulo = parcial.match(/"subtitulo"\s*:\s*"([^"]+)"/);
             if (subtitulo) {
                 setResultadoTitleAndSections(prev => ({
                     ...prev,
                     subtitulo: subtitulo[1]
                 }));
             }
-
         }
 
-        console.log("===== RAW =====");
-        console.log(jsonAcumulado);
-
-        // Si realmente usas SSE, descomentá esta línea.
-        // Si no, dejala comentada.
-        // jsonAcumulado = jsonAcumulado.replace(/^data:\s*/gm, "");
-
-        jsonAcumulado = jsonAcumulado.trim();
-
-        const inicio = jsonAcumulado.indexOf("{");
-        const fin = jsonAcumulado.lastIndexOf("}");
-
-        if (inicio === -1 || fin === -1) {
-            throw new Error("No se encontró un JSON válido.");
-        }
-
-        const json = jsonAcumulado.substring(inicio, fin + 1);
-
-        console.log("===== JSON =====");
-        console.log(json);
+        // Eliminar únicamente el protocolo SSE
+        const json = respuesta
+            .replace(/^data:\s*/gm, "")
+            .trim();
 
         const data = JSON.parse(json);
-
-        console.log("JSON parseado:", data);
 
         setResultadoTitleAndSections({
             titulo: data.titulo,
@@ -212,14 +190,10 @@ const enviarDatoTitleAndSections = async (textoDirecto) => {
 
         setResultadoSeccionesTitleAndSections(data.secciones || []);
 
-    } catch (e) {
-
-        console.error(e);
-
+    } catch (error) {
+        console.error("Error procesando la respuesta:", error);
     }
-
 };
-	
     useEffect(() => {
         // Validamos que pdfData exista y no sea solo espacios en blanco
         if (pdfData && typeof pdfData === 'string' && pdfData.trim() !== '') {

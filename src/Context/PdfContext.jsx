@@ -115,27 +115,67 @@ export const PdfProvider = ({ children }) => {
         }
     }, []); 
 
-    const enviarDatoTitleAndSections = async () => {
+   const enviarDatoTitleAndSections = async () => {
         if (!pdfData) return; 
         try {
-			const baseUrl = import.meta.env.VITE_BACKEND_URL || ''; 
-			const urlTuApi = `${baseUrl}/api/v1/titleAndSections`;
-			const responseTitleAndSections = await fetch(urlTuApi, {
+            const baseUrl = import.meta.env.VITE_BACKEND_URL || ''; 
+            const urlTuApi = `${baseUrl}/api/v1/titleAndSections`; // Se mantiene EXACTAMENTE la misma URL
+
+            const response = await fetch(urlTuApi, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain' },
                 body: pdfData, 
             });
 
-            if (responseTitleAndSections.ok) {
-                const dataTitleAndSections = await responseTitleAndSections.json();
-                setResultadoTitleAndSections(dataTitleAndSections);
-                setResultadoSeccionesTitleAndSections(dataTitleAndSections.secciones);
+            if (!response.ok) throw new Error("Error en la respuesta del servidor");
+
+            // 1. Abrimos el lector de flujos (Stream) de la respuesta HTTP
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder('utf-8');
+            let jsonAcumulado = '';
+
+            // 2. Leemos fragmento por fragmento en tiempo real
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break; // Finalizó el envío desde Spring Boot
+
+                const chunk = decoder.decode(value, { stream: true });
+                jsonAcumulado += chunk;
+
+                // 3. Extraemos el Título tan pronto aparece (en ~1 a 2 segundos)
+                const tituloMatch = jsonAcumulado.match(/"titulo"\s*:\s*"([^"]+)"/);
+                if (tituloMatch && tituloMatch[1]) {
+                    setResultadoTitleAndSections(prev => ({ ...prev, titulo: tituloMatch[1] }));
+                }
+
+                // 4. Extraemos el Subtítulo tan pronto aparece
+                const subtituloMatch = jsonAcumulado.match(/"subtitulo"\s*:\s*"([^"]+)"/);
+                if (subtituloMatch && subtituloMatch[1]) {
+                    setResultadoTitleAndSections(prev => ({ ...prev, subtitulo: subtituloMatch[1] }));
+                }
+
+                // 5. Extraemos las secciones a medida que se completan en el stream
+                const seccionesCoincidentes = [...jsonAcumulado.matchAll(/\{\s*"titulo_seccion"\s*:\s*"([^"]+)"\s*,\s*"contenido"\s*:\s*"([^"]+)"\s*\}/g)];
+                if (seccionesCoincidentes.length > 0) {
+                    const seccionesProcesadas = seccionesCoincidentes.map(m => ({
+                        titulo_seccion: m[1],
+                        contenido: m[2]
+                    }));
+                    setResultadoSeccionesTitleAndSections(seccionesProcesadas);
+                }
             }
+
+            // Parseo final de seguridad una vez que se completó toda la transferencia
+            const jsonLimpio = jsonAcumulado.replace(/^data:\s*/gm, '').trim();
+            const dataFinal = JSON.parse(jsonLimpio);
+            setResultadoTitleAndSections(dataFinal);
+            setResultadoSeccionesTitleAndSections(dataFinal.secciones || []);
+
         } catch (error) {
-            console.error('Error al conectar con Spring Boot:', error);
+            console.error('Error al recibir el streaming de Spring Boot:', error);
         }
     };
-
+	
     useEffect(() => {
         if (pdfData) {
             enviarDatoTitleAndSections();

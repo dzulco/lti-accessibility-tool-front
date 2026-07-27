@@ -115,107 +115,28 @@ export const PdfProvider = ({ children }) => {
         }
     }, []); 
 
-const enviarDatoTitleAndSections = async (textoDirecto) => {
+const reader = response.body.getReader();
+const decoder = new TextDecoder();
 
-    const textoAEnviar = textoDirecto || pdfData;
+let respuesta = "";
 
-    if (!textoAEnviar || typeof textoAEnviar !== 'string' || textoAEnviar.trim() === '') {
-        console.error("El texto del PDF está vacío.");
-        return;
-    }
+while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
 
-    try {
+    respuesta += decoder.decode(value, { stream: true });
 
-        const baseUrl = import.meta.env.VITE_BACKEND_URL || '';
-        const url = `${baseUrl}/api/v1/titleAndSections`;
+    const titulo = respuesta.match(/"titulo"\s*:\s*"([^"]+)"/);
+    if (titulo) setTitulo(titulo[1]);
 
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'text/plain; charset=utf-8'
-            },
-            body: textoAEnviar
-        });
+    const subtitulo = respuesta.match(/"subtitulo"\s*:\s*"([^"]+)"/);
+    if (subtitulo) setSubtitulo(subtitulo[1]);
+}
 
-        if (!response.ok) {
-            throw new Error("Error en la respuesta del servidor");
-        }
+const data = JSON.parse(respuesta);
 
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder("utf-8");
-
-        let jsonAcumulado = "";
-
-        while (true) {
-
-            const { done, value } = await reader.read();
-
-            if (done) break;
-
-            const chunk = decoder.decode(value, { stream: true });
-
-            jsonAcumulado += chunk;
-
-            // Mostrar el título apenas aparezca
-            const tituloMatch = jsonAcumulado.match(/"titulo"\s*:\s*"([^"]+)"/);
-
-            if (tituloMatch) {
-                setResultadoTitleAndSections(prev => ({
-                    ...prev,
-                    titulo: tituloMatch[1]
-                }));
-            }
-
-            // Mostrar el subtítulo apenas aparezca
-            const subtituloMatch = jsonAcumulado.match(/"subtitulo"\s*:\s*"([^"]+)"/);
-
-            if (subtituloMatch) {
-                setResultadoTitleAndSections(prev => ({
-                    ...prev,
-                    subtitulo: subtituloMatch[1]
-                }));
-            }
-
-        }
-
-        console.log("===== JSON RECIBIDO =====");
-        console.log(jsonAcumulado);
-
-        // Limpiar prefijos SSE
-        let textoLimpio = jsonAcumulado
-            .split("\n")
-            .map(linea => linea.replace(/^data:\s*/, ""))
-            .join("");
-
-        // Obtener únicamente el JSON
-        const inicio = textoLimpio.indexOf("{");
-        const fin = textoLimpio.lastIndexOf("}");
-
-        if (inicio === -1 || fin === -1) {
-            throw new Error("No se encontró un JSON válido.");
-        }
-
-        textoLimpio = textoLimpio.substring(inicio, fin + 1);
-
-        // Parsear el JSON completo
-        const data = JSON.parse(textoLimpio);
-
-        console.log("JSON parseado:", data);
-
-        setResultadoTitleAndSections({
-            titulo: data.titulo,
-            subtitulo: data.subtitulo
-        });
-
-        setResultadoSeccionesTitleAndSections(data.secciones || []);
-
-    } catch (error) {
-
-        console.error("Error:", error);
-
-    }
-
-};
+setResultadoTitleAndSections(data);
+setResultadoSeccionesTitleAndSections(data.secciones);
 	
     useEffect(() => {
         // Validamos que pdfData exista y no sea solo espacios en blanco

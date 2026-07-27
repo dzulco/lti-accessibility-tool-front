@@ -115,92 +115,33 @@ export const PdfProvider = ({ children }) => {
         }
     }, []); 
 
-const enviarDatoTitleAndSections = async (textoDirecto) => {
+    const enviarDatoTitleAndSections = async () => {
+        if (!pdfData) return; 
+        try {
+			const baseUrl = import.meta.env.VITE_BACKEND_URL || ''; 
+			const urlTuApi = `${baseUrl}/api/v1/titleAndSections`;
+			const responseTitleAndSections = await fetch(urlTuApi, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain' },
+                body: pdfData, 
+            });
 
-    const textoAEnviar = textoDirecto || pdfData;
-
-    if (!textoAEnviar || textoAEnviar.trim() === "") {
-        console.error("El texto del PDF está vacío.");
-        return;
-    }
-
-    try {
-
-        const baseUrl = import.meta.env.VITE_BACKEND_URL || "";
-        const response = await fetch(`${baseUrl}/api/v1/titleAndSections`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "text/plain; charset=utf-8"
-            },
-            body: textoAEnviar
-        });
-
-        if (!response.ok) {
-            throw new Error("Error en la respuesta del servidor");
-        }
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder("utf-8");
-
-        let respuesta = "";
-
-        while (true) {
-
-            const { done, value } = await reader.read();
-
-            if (done) break;
-
-            const chunk = decoder.decode(value, { stream: true });
-
-            respuesta += chunk;
-
-            // Limpiar únicamente el prefijo SSE para poder buscar
-            const parcial = respuesta.replace(/^data:\s*/gm, "");
-
-            // Mostrar título en tiempo real
-            const titulo = parcial.match(/"titulo"\s*:\s*"([^"]+)"/);
-            if (titulo) {
-                setResultadoTitleAndSections(prev => ({
-                    ...prev,
-                    titulo: titulo[1]
-                }));
+            if (responseTitleAndSections.ok) {
+                const dataTitleAndSections = await responseTitleAndSections.json();
+                setResultadoTitleAndSections(dataTitleAndSections);
+                setResultadoSeccionesTitleAndSections(dataTitleAndSections.secciones);
             }
-
-            // Mostrar subtítulo en tiempo real
-            const subtitulo = parcial.match(/"subtitulo"\s*:\s*"([^"]+)"/);
-            if (subtitulo) {
-                setResultadoTitleAndSections(prev => ({
-                    ...prev,
-                    subtitulo: subtitulo[1]
-                }));
-            }
+        } catch (error) {
+            console.error('Error al conectar con Spring Boot:', error);
         }
+    };
 
-        // Eliminar únicamente el protocolo SSE
-        const json = respuesta
-            .replace(/^data:\s*/gm, "")
-            .trim();
-
-        const data = JSON.parse(json);
-
-        setResultadoTitleAndSections({
-            titulo: data.titulo,
-            subtitulo: data.subtitulo
-        });
-
-        setResultadoSeccionesTitleAndSections(data.secciones || []);
-
-    } catch (error) {
-        console.error("Error procesando la respuesta:", error);
-    }
-};
     useEffect(() => {
-        // Validamos que pdfData exista y no sea solo espacios en blanco
-        if (pdfData && typeof pdfData === 'string' && pdfData.trim() !== '') {
-            enviarDatoTitleAndSections(pdfData); // Le pasamos pdfData directamente
+        if (pdfData) {
+            enviarDatoTitleAndSections();
         }
     }, [pdfData]);
-	
+
     const enviarDatoFlashCars = async () => {
         if (!pdfData) return;
         try {

@@ -115,28 +115,110 @@ export const PdfProvider = ({ children }) => {
         }
     }, []); 
 
-const reader = response.body.getReader();
-const decoder = new TextDecoder();
+const enviarDatoTitleAndSections = async (textoDirecto) => {
 
-let respuesta = "";
+    const textoAEnviar = textoDirecto || pdfData;
 
-while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
+    console.log("PDF enviado:", textoAEnviar?.substring(0, 80));
 
-    respuesta += decoder.decode(value, { stream: true });
+    if (!textoAEnviar || textoAEnviar.trim() === "") {
+        console.error("Texto vacío.");
+        return;
+    }
 
-    const titulo = respuesta.match(/"titulo"\s*:\s*"([^"]+)"/);
-    if (titulo) setTitulo(titulo[1]);
+    try {
 
-    const subtitulo = respuesta.match(/"subtitulo"\s*:\s*"([^"]+)"/);
-    if (subtitulo) setSubtitulo(subtitulo[1]);
-}
+        const baseUrl = import.meta.env.VITE_BACKEND_URL || "";
+        const url = `${baseUrl}/api/v1/titleAndSections`;
 
-const data = JSON.parse(respuesta);
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "text/plain; charset=utf-8"
+            },
+            body: textoAEnviar
+        });
 
-setResultadoTitleAndSections(data);
-setResultadoSeccionesTitleAndSections(data.secciones);
+        if (!response.ok) {
+            throw new Error("Error del servidor");
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+
+        let jsonAcumulado = "";
+
+        while (true) {
+
+            const { done, value } = await reader.read();
+
+            if (done) break;
+
+            const chunk = decoder.decode(value, { stream: true });
+
+            jsonAcumulado += chunk;
+
+            // Streaming de título
+            const titulo = jsonAcumulado.match(/"titulo"\s*:\s*"([^"]+)"/);
+
+            if (titulo) {
+                setResultadoTitleAndSections(prev => ({
+                    ...prev,
+                    titulo: titulo[1]
+                }));
+            }
+
+            // Streaming de subtítulo
+            const subtitulo = jsonAcumulado.match(/"subtitulo"\s*:\s*"([^"]+)"/);
+
+            if (subtitulo) {
+                setResultadoTitleAndSections(prev => ({
+                    ...prev,
+                    subtitulo: subtitulo[1]
+                }));
+            }
+
+        }
+
+        console.log("===== RAW =====");
+        console.log(jsonAcumulado);
+
+        // Si realmente usas SSE, descomentá esta línea.
+        // Si no, dejala comentada.
+        // jsonAcumulado = jsonAcumulado.replace(/^data:\s*/gm, "");
+
+        jsonAcumulado = jsonAcumulado.trim();
+
+        const inicio = jsonAcumulado.indexOf("{");
+        const fin = jsonAcumulado.lastIndexOf("}");
+
+        if (inicio === -1 || fin === -1) {
+            throw new Error("No se encontró un JSON válido.");
+        }
+
+        const json = jsonAcumulado.substring(inicio, fin + 1);
+
+        console.log("===== JSON =====");
+        console.log(json);
+
+        const data = JSON.parse(json);
+
+        console.log("JSON parseado:", data);
+
+        setResultadoTitleAndSections({
+            titulo: data.titulo,
+            subtitulo: data.subtitulo
+        });
+
+        setResultadoSeccionesTitleAndSections(data.secciones || []);
+
+    } catch (e) {
+
+        console.error(e);
+
+    }
+
+};
 	
     useEffect(() => {
         // Validamos que pdfData exista y no sea solo espacios en blanco

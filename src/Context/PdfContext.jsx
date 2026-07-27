@@ -178,23 +178,25 @@ export const PdfProvider = ({ children }) => {
             console.log(jsonAcumulado);
             console.log("=========================================");
 
-            // 1. Quitar los prefijos "data:" que envía Spring WebFlux en SSE
+            // 1. Quitar prefijos "data:" enviados por SSE / Spring WebFlux
             let textoLimpio = jsonAcumulado
                 .split('\n')
                 .map(linea => linea.replace(/^data:\s*/, ''))
                 .join('');
 
-            // 2. Extraer ÚNICAMENTE lo que está entre el primer '{' y el último '}'
+            // 2. Delimitar únicamente desde la primera '{' hasta la última '}'
             const inicioJson = textoLimpio.indexOf('{');
             const finJson = textoLimpio.lastIndexOf('}');
 
             if (inicioJson !== -1 && finJson !== -1 && finJson > inicioJson) {
                 textoLimpio = textoLimpio.substring(inicioJson, finJson + 1);
 
-                // 3. Sanitizar caracteres de control invisibles (saltos de línea internos)
-                textoLimpio = textoLimpio
-                    .replace(/[\r\n\t]+/g, " ")
-                    .replace(/\\"/g, '"');
+                // 3. Reemplazar saltos de línea internos y tabulaciones por espacios
+                textoLimpio = textoLimpio.replace(/[\r\n\t]+/g, " ");
+
+                // 4. Corregir comillas dobles literales sin escapado dentro de cadenas JSON
+                // Protege únicamente comillas internas que no formen parte de la estructura JSON
+                textoLimpio = textoLimpio.replace(/(?<=:\s*"|"[^"]*")"(?=[^",}\]]*")/g, '\\"');
 
                 try {
                     const dataFinal = JSON.parse(textoLimpio);
@@ -203,7 +205,20 @@ export const PdfProvider = ({ children }) => {
                     console.log("¡JSON procesado y parseado con éxito!", dataFinal);
                 } catch (errorParse) {
                     console.error("Error al parsear el JSON sanitizado:", errorParse);
-                    console.log("Texto que intentó parsear:", textoLimpio);
+
+                    // Reintento de emergencia: Sanitización agresiva de comillas internas en valores
+                    try {
+                        const fallbackJson = textoLimpio.replace(/"([^"]+)":\s*"([^"]*?)"/g, (match, clave, valor) => {
+                            const valorLimpio = valor.replace(/"/g, '“');
+                            return `"${clave}": "${valorLimpio}"`;
+                        });
+                        const dataFallback = JSON.parse(fallbackJson);
+                        setResultadoTitleAndSections(dataFallback);
+                        setResultadoSeccionesTitleAndSections(dataFallback.secciones || []);
+                        console.log("¡JSON recuperado con reintento fallback!", dataFallback);
+                    } catch (e2) {
+                        console.error("Falló la recuperación de emergencia del JSON:", e2);
+                    }
                 }
             } else {
                 console.error("No se encontró una estructura JSON válida en el stream.");

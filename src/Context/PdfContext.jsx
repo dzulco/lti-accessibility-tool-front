@@ -115,24 +115,37 @@ export const PdfProvider = ({ children }) => {
         }
     }, []); 
 
-  const enviarDatoTitleAndSections = async () => {
-        if (!pdfData) return; 
+  // Le agregamos (textoDirecto) como parámetro opcional por si el estado 'pdfData' aún no se actualizó
+    const enviarDatoTitleAndSections = async (textoDirecto) => {
+        // Usa el parámetro si existe; si no, usa el estado pdfData
+        const textoAEnviar = textoDirecto || pdfData;
+
+        // 🔍 Log de control para verificar que el texto no viaje vacío
+        console.log("PDF DATA ENVIADO AL BACKEND:", textoAEnviar ? textoAEnviar.substring(0, 50) + "..." : "VACÍO / NULL");
+
+        if (!textoAEnviar || textoAEnviar.trim() === '') {
+            console.error("El texto del PDF está vacío. No se enviará la petición.");
+            return;
+        }
+
         try {
-            const baseUrl = import.meta.env.VITE_BACKEND_URL || ''; 
+            const baseUrl = import.meta.env.VITE_BACKEND_URL || '';
             const urlTuApi = `${baseUrl}/api/v1/titleAndSections`;
 
             const response = await fetch(urlTuApi, {
                 method: 'POST',
-                headers: { 'Content-Type': 'text/plain' },
-                body: pdfData, 
+                headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+                body: textoAEnviar, // Enviamos el texto validado
             });
 
             if (!response.ok) throw new Error("Error en la respuesta del servidor");
 
+            // 1. Lector de flujo (Stream) en tiempo real
             const reader = response.body.getReader();
             const decoder = new TextDecoder('utf-8');
             let jsonAcumulado = '';
 
+            // 2. Procesa la respuesta pedazo a pedazo
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
@@ -140,19 +153,19 @@ export const PdfProvider = ({ children }) => {
                 const chunk = decoder.decode(value, { stream: true });
                 jsonAcumulado += chunk;
 
-                // Extraer título en tiempo real cuando aparezca
+                // Extraer Título tan pronto aparezca
                 const tituloMatch = jsonAcumulado.match(/"titulo"\s*:\s*"([^"]+)"/);
                 if (tituloMatch && tituloMatch[1]) {
                     setResultadoTitleAndSections(prev => ({ ...prev, titulo: tituloMatch[1] }));
                 }
 
-                // Extraer subtítulo
+                // Extraer Subtítulo tan pronto aparezca
                 const subtituloMatch = jsonAcumulado.match(/"subtitulo"\s*:\s*"([^"]+)"/);
                 if (subtituloMatch && subtituloMatch[1]) {
                     setResultadoTitleAndSections(prev => ({ ...prev, subtitulo: subtituloMatch[1] }));
                 }
 
-                // Extraer secciones completas
+                // Extraer Secciones a medida que se completan
                 const seccionesCoincidentes = [...jsonAcumulado.matchAll(/\{\s*"titulo_seccion"\s*:\s*"([^"]+)"\s*,\s*"contenido"\s*:\s*"([^"]+)"\s*\}/g)];
                 if (seccionesCoincidentes.length > 0) {
                     const seccionesProcesadas = seccionesCoincidentes.map(m => ({
@@ -163,15 +176,15 @@ export const PdfProvider = ({ children }) => {
                 }
             }
 
-            // LOG PARA VER EXACTAMENTE LO QUE DEVUELVE LA IA
+            // 🔍 Log para ver todo lo que devolvió Gemini en bruto
             console.log("=== RESPUESTA COMPLETA DE LA IA (RAW) ===");
             console.log(jsonAcumulado);
             console.log("=========================================");
 
-            // LIMPIEZA DEL JSON:
+            // 3. LIMPIEZA DEL JSON
             let textoLimpio = jsonAcumulado.replace(/^data:\s*/gm, '');
 
-            // Extraer únicamente lo que esté entre la primera '{' y la última '}'
+            // Extrae únicamente desde la primera '{' hasta la última '}'
             const inicioJson = textoLimpio.indexOf('{');
             const finJson = textoLimpio.lastIndexOf('}');
 
@@ -179,7 +192,7 @@ export const PdfProvider = ({ children }) => {
                 textoLimpio = textoLimpio.substring(inicioJson, finJson + 1);
             }
 
-            // Parsear el JSON ya aislado y limpio
+            // 4. Parseo final
             const dataFinal = JSON.parse(textoLimpio);
             setResultadoTitleAndSections(dataFinal);
             setResultadoSeccionesTitleAndSections(dataFinal.secciones || []);
@@ -190,11 +203,12 @@ export const PdfProvider = ({ children }) => {
     };
 	
     useEffect(() => {
-        if (pdfData) {
-            enviarDatoTitleAndSections();
+        // Validamos que pdfData exista y no sea solo espacios en blanco
+        if (pdfData && typeof pdfData === 'string' && pdfData.trim() !== '') {
+            enviarDatoTitleAndSections(pdfData); // Le pasamos pdfData directamente
         }
     }, [pdfData]);
-
+	
     const enviarDatoFlashCars = async () => {
         if (!pdfData) return;
         try {

@@ -115,119 +115,107 @@ export const PdfProvider = ({ children }) => {
         }
     }, []); 
 
-  const enviarDatoTitleAndSections = async (textoDirecto) => {
-        // Toma el argumento directo o cae en el estado
-        const textoAEnviar = textoDirecto || pdfData;
+const enviarDatoTitleAndSections = async (textoDirecto) => {
 
-        console.log("PDF DATA ENVIADO AL BACKEND:", textoAEnviar ? textoAEnviar.substring(0, 60) + "..." : "VACÍO");
+    const textoAEnviar = textoDirecto || pdfData;
 
-        if (!textoAEnviar || typeof textoAEnviar !== 'string' || textoAEnviar.trim() === '') {
-            console.error("El texto del PDF está vacío o no es un string válido.");
-            return;
+    if (!textoAEnviar || typeof textoAEnviar !== 'string' || textoAEnviar.trim() === '') {
+        console.error("El texto del PDF está vacío.");
+        return;
+    }
+
+    try {
+
+        const baseUrl = import.meta.env.VITE_BACKEND_URL || '';
+        const url = `${baseUrl}/api/v1/titleAndSections`;
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'text/plain; charset=utf-8'
+            },
+            body: textoAEnviar
+        });
+
+        if (!response.ok) {
+            throw new Error("Error en la respuesta del servidor");
         }
 
-        try {
-            const baseUrl = import.meta.env.VITE_BACKEND_URL || '';
-            const urlTuApi = `${baseUrl}/api/v1/titleAndSections`;
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder("utf-8");
 
-            const response = await fetch(urlTuApi, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-                body: textoAEnviar,
-            });
+        let jsonAcumulado = "";
 
-            if (!response.ok) throw new Error("Error en la respuesta del servidor");
+        while (true) {
 
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder('utf-8');
-            let jsonAcumulado = '';
+            const { done, value } = await reader.read();
 
-            // Lectura en tiempo real del stream
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
+            if (done) break;
 
-                const chunk = decoder.decode(value, { stream: true });
-                jsonAcumulado += chunk;
+            const chunk = decoder.decode(value, { stream: true });
 
-                // Extraer título en tiempo real
-                const tituloMatch = jsonAcumulado.match(/"titulo"\s*:\s*"([^"]+)"/);
-                if (tituloMatch && tituloMatch[1]) {
-                    setResultadoTitleAndSections(prev => ({ ...prev, titulo: tituloMatch[1] }));
-                }
+            jsonAcumulado += chunk;
 
-                // Extraer subtítulo en tiempo real
-                const subtituloMatch = jsonAcumulado.match(/"subtitulo"\s*:\s*"([^"]+)"/);
-                if (subtituloMatch && subtituloMatch[1]) {
-                    setResultadoTitleAndSections(prev => ({ ...prev, subtitulo: subtituloMatch[1] }));
-                }
+            // Mostrar el título apenas aparezca
+            const tituloMatch = jsonAcumulado.match(/"titulo"\s*:\s*"([^"]+)"/);
 
-                // Extraer secciones completas a medida que llegan
-                const seccionesCoincidentes = [...jsonAcumulado.matchAll(/\{\s*"titulo_seccion"\s*:\s*"([^"]+)"\s*,\s*"contenido"\s*:\s*"([^"]+)"\s*\}/g)];
-                if (seccionesCoincidentes.length > 0) {
-                    const seccionesProcesadas = seccionesCoincidentes.map(m => ({
-                        titulo_seccion: m[1],
-                        contenido: m[2]
-                    }));
-                    setResultadoSeccionesTitleAndSections(seccionesProcesadas);
-                }
+            if (tituloMatch) {
+                setResultadoTitleAndSections(prev => ({
+                    ...prev,
+                    titulo: tituloMatch[1]
+                }));
             }
 
-            // 🔍 LOG DE CONTROL
-            console.log("=== RESPUESTA COMPLETA DE LA IA (RAW) ===");
-            console.log(jsonAcumulado);
-            console.log("=========================================");
+            // Mostrar el subtítulo apenas aparezca
+            const subtituloMatch = jsonAcumulado.match(/"subtitulo"\s*:\s*"([^"]+)"/);
 
-            // 1. Quitar prefijos "data:" enviados por SSE / Spring WebFlux
-            let textoLimpio = jsonAcumulado
-                .split('\n')
-                .map(linea => linea.replace(/^data:\s*/, ''))
-                .join('');
-
-            // 2. Delimitar únicamente desde la primera '{' hasta la última '}'
-            const inicioJson = textoLimpio.indexOf('{');
-            const finJson = textoLimpio.lastIndexOf('}');
-
-            if (inicioJson !== -1 && finJson !== -1 && finJson > inicioJson) {
-                textoLimpio = textoLimpio.substring(inicioJson, finJson + 1);
-
-                // 3. Reemplazar saltos de línea internos y tabulaciones por espacios
-                textoLimpio = textoLimpio.replace(/[\r\n\t]+/g, " ");
-
-                // 4. Corregir comillas dobles literales sin escapado dentro de cadenas JSON
-                // Protege únicamente comillas internas que no formen parte de la estructura JSON
-                textoLimpio = textoLimpio.replace(/(?<=:\s*"|"[^"]*")"(?=[^",}\]]*")/g, '\\"');
-
-                try {
-                    const dataFinal = JSON.parse(textoLimpio);
-                    setResultadoTitleAndSections(dataFinal);
-                    setResultadoSeccionesTitleAndSections(dataFinal.secciones || []);
-                    console.log("¡JSON procesado y parseado con éxito!", dataFinal);
-                } catch (errorParse) {
-                    console.error("Error al parsear el JSON sanitizado:", errorParse);
-
-                    // Reintento de emergencia: Sanitización agresiva de comillas internas en valores
-                    try {
-                        const fallbackJson = textoLimpio.replace(/"([^"]+)":\s*"([^"]*?)"/g, (match, clave, valor) => {
-                            const valorLimpio = valor.replace(/"/g, '“');
-                            return `"${clave}": "${valorLimpio}"`;
-                        });
-                        const dataFallback = JSON.parse(fallbackJson);
-                        setResultadoTitleAndSections(dataFallback);
-                        setResultadoSeccionesTitleAndSections(dataFallback.secciones || []);
-                        console.log("¡JSON recuperado con reintento fallback!", dataFallback);
-                    } catch (e2) {
-                        console.error("Falló la recuperación de emergencia del JSON:", e2);
-                    }
-                }
-            } else {
-                console.error("No se encontró una estructura JSON válida en el stream.");
+            if (subtituloMatch) {
+                setResultadoTitleAndSections(prev => ({
+                    ...prev,
+                    subtitulo: subtituloMatch[1]
+                }));
             }
 
-        } catch (error) {
-            console.error('Error al recibir el streaming de Spring Boot:', error);
         }
-    };
+
+        console.log("===== JSON RECIBIDO =====");
+        console.log(jsonAcumulado);
+
+        // Limpiar prefijos SSE
+        let textoLimpio = jsonAcumulado
+            .split("\n")
+            .map(linea => linea.replace(/^data:\s*/, ""))
+            .join("");
+
+        // Obtener únicamente el JSON
+        const inicio = textoLimpio.indexOf("{");
+        const fin = textoLimpio.lastIndexOf("}");
+
+        if (inicio === -1 || fin === -1) {
+            throw new Error("No se encontró un JSON válido.");
+        }
+
+        textoLimpio = textoLimpio.substring(inicio, fin + 1);
+
+        // Parsear el JSON completo
+        const data = JSON.parse(textoLimpio);
+
+        console.log("JSON parseado:", data);
+
+        setResultadoTitleAndSections({
+            titulo: data.titulo,
+            subtitulo: data.subtitulo
+        });
+
+        setResultadoSeccionesTitleAndSections(data.secciones || []);
+
+    } catch (error) {
+
+        console.error("Error:", error);
+
+    }
+
+};
 	
     useEffect(() => {
         // Validamos que pdfData exista y no sea solo espacios en blanco

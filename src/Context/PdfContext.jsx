@@ -115,16 +115,14 @@ export const PdfProvider = ({ children }) => {
         }
     }, []); 
 
-  // Le agregamos (textoDirecto) como parámetro opcional por si el estado 'pdfData' aún no se actualizó
-    const enviarDatoTitleAndSections = async (textoDirecto) => {
-        // Usa el parámetro si existe; si no, usa el estado pdfData
+  const enviarDatoTitleAndSections = async (textoDirecto) => {
+        // Toma el argumento directo o cae en el estado
         const textoAEnviar = textoDirecto || pdfData;
 
-        // 🔍 Log de control para verificar que el texto no viaje vacío
-        console.log("PDF DATA ENVIADO AL BACKEND:", textoAEnviar ? textoAEnviar.substring(0, 50) + "..." : "VACÍO / NULL");
+        console.log("PDF DATA ENVIADO AL BACKEND:", textoAEnviar ? textoAEnviar.substring(0, 60) + "..." : "VACÍO");
 
-        if (!textoAEnviar || textoAEnviar.trim() === '') {
-            console.error("El texto del PDF está vacío. No se enviará la petición.");
+        if (!textoAEnviar || typeof textoAEnviar !== 'string' || textoAEnviar.trim() === '') {
+            console.error("El texto del PDF está vacío o no es un string válido.");
             return;
         }
 
@@ -135,17 +133,16 @@ export const PdfProvider = ({ children }) => {
             const response = await fetch(urlTuApi, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-                body: textoAEnviar, // Enviamos el texto validado
+                body: textoAEnviar,
             });
 
             if (!response.ok) throw new Error("Error en la respuesta del servidor");
 
-            // 1. Lector de flujo (Stream) en tiempo real
             const reader = response.body.getReader();
             const decoder = new TextDecoder('utf-8');
             let jsonAcumulado = '';
 
-            // 2. Procesa la respuesta pedazo a pedazo
+            // Lectura en tiempo real del stream
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
@@ -153,19 +150,19 @@ export const PdfProvider = ({ children }) => {
                 const chunk = decoder.decode(value, { stream: true });
                 jsonAcumulado += chunk;
 
-                // Extraer Título tan pronto aparezca
+                // Extraer título en tiempo real
                 const tituloMatch = jsonAcumulado.match(/"titulo"\s*:\s*"([^"]+)"/);
                 if (tituloMatch && tituloMatch[1]) {
                     setResultadoTitleAndSections(prev => ({ ...prev, titulo: tituloMatch[1] }));
                 }
 
-                // Extraer Subtítulo tan pronto aparezca
+                // Extraer subtítulo en tiempo real
                 const subtituloMatch = jsonAcumulado.match(/"subtitulo"\s*:\s*"([^"]+)"/);
                 if (subtituloMatch && subtituloMatch[1]) {
                     setResultadoTitleAndSections(prev => ({ ...prev, subtitulo: subtituloMatch[1] }));
                 }
 
-                // Extraer Secciones a medida que se completan
+                // Extraer secciones completas a medida que llegan
                 const seccionesCoincidentes = [...jsonAcumulado.matchAll(/\{\s*"titulo_seccion"\s*:\s*"([^"]+)"\s*,\s*"contenido"\s*:\s*"([^"]+)"\s*\}/g)];
                 if (seccionesCoincidentes.length > 0) {
                     const seccionesProcesadas = seccionesCoincidentes.map(m => ({
@@ -176,26 +173,41 @@ export const PdfProvider = ({ children }) => {
                 }
             }
 
-            // 🔍 Log para ver todo lo que devolvió Gemini en bruto
+            // 🔍 LOG DE CONTROL
             console.log("=== RESPUESTA COMPLETA DE LA IA (RAW) ===");
             console.log(jsonAcumulado);
             console.log("=========================================");
 
-            // 3. LIMPIEZA DEL JSON
-            let textoLimpio = jsonAcumulado.replace(/^data:\s*/gm, '');
+            // 1. Quitar los prefijos "data:" que envía Spring WebFlux en SSE
+            let textoLimpio = jsonAcumulado
+                .split('\n')
+                .map(linea => linea.replace(/^data:\s*/, ''))
+                .join('');
 
-            // Extrae únicamente desde la primera '{' hasta la última '}'
+            // 2. Extraer ÚNICAMENTE lo que está entre el primer '{' y el último '}'
             const inicioJson = textoLimpio.indexOf('{');
             const finJson = textoLimpio.lastIndexOf('}');
 
-            if (inicioJson !== -1 && finJson !== -1) {
+            if (inicioJson !== -1 && finJson !== -1 && finJson > inicioJson) {
                 textoLimpio = textoLimpio.substring(inicioJson, finJson + 1);
-            }
 
-            // 4. Parseo final
-            const dataFinal = JSON.parse(textoLimpio);
-            setResultadoTitleAndSections(dataFinal);
-            setResultadoSeccionesTitleAndSections(dataFinal.secciones || []);
+                // 3. Sanitizar caracteres de control invisibles (saltos de línea internos)
+                textoLimpio = textoLimpio
+                    .replace(/[\r\n\t]+/g, " ")
+                    .replace(/\\"/g, '"');
+
+                try {
+                    const dataFinal = JSON.parse(textoLimpio);
+                    setResultadoTitleAndSections(dataFinal);
+                    setResultadoSeccionesTitleAndSections(dataFinal.secciones || []);
+                    console.log("¡JSON procesado y parseado con éxito!", dataFinal);
+                } catch (errorParse) {
+                    console.error("Error al parsear el JSON sanitizado:", errorParse);
+                    console.log("Texto que intentó parsear:", textoLimpio);
+                }
+            } else {
+                console.error("No se encontró una estructura JSON válida en el stream.");
+            }
 
         } catch (error) {
             console.error('Error al recibir el streaming de Spring Boot:', error);

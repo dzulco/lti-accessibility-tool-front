@@ -290,12 +290,37 @@ const parsePdfItemsToMarkdown = (items, pageNum) => {
    * 4. Lee automáticamente el parámetro pdfUrl de la URL en la carga inicial
    */
   useEffect(() => {
-    const queryParams = new URLSearchParams(window.location.search);
-    const urlDesdeParams = queryParams.get("pdfUrl");
-    if (urlDesdeParams) {
-      cargarDocumento(urlDesdeParams);
-    }
-  }, []);
+	  const queryParams = new URLSearchParams(window.location.search);
+	  
+	  // 1. Extraer los datos del usuario que el Back pasó en la redirección
+	  const userId = queryParams.get("userId");
+	  const user = queryParams.get("user") || queryParams.get("username") || queryParams.get("nombre");
+	  const email = queryParams.get("email");
+	  const course = queryParams.get("course");
+	  const section = queryParams.get("section");
+	  const urlDesdeParams = queryParams.get("pdfUrl");
+
+	  // 2. Guardarlos en el estado userData si vienen en la URL
+	  if (userId || user || email) {
+		setUserData({
+		  userId,
+		  user,
+		  email,
+		  course,
+		  section,
+		});
+	  }
+
+	  // 3. Cargar el PDF si viene la URL
+	  if (urlDesdeParams) {
+		cargarDocumento(urlDesdeParams);
+	  }
+
+	  // (Opcional) Limpiar los parámetros de la barra de direcciones por seguridad/estética
+	  if (userId || urlDesdeParams) {
+		window.history.replaceState({}, document.title, window.location.pathname);
+	  }
+	}, []);
 
   return (
     <PdfContext.Provider value={{

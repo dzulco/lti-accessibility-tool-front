@@ -15,12 +15,12 @@ export default function VisorAccesibleLTI() {
     cargando, 
     error, 
     enviarDato, 
-    enviarDatoFlashCars,
+    enviarDatoFlashCars, 
     menuAbierto, 
-    setMenuAbierto,
+    setMenuAbierto, 
     resultadoSeccionesTitleAndSections 
   } = useContext(PdfContext);
-  
+
   const { colorFondo, colorTexto, setColorFondo } = useContext(ColorContext);
   const [palabraBuscada, setPalabraBuscada] = useState('');
   const [colorFondoPDF2, setColorFondoPDF2] = useState('#ffffff');
@@ -35,16 +35,40 @@ export default function VisorAccesibleLTI() {
   const [cargandoExplicacion, setCargandoExplicacion] = useState(false);
   const [tipoModal, setTipoModal] = useState('explicacion');
 
+  // Función para resaltar la palabra buscada (migrada de HojaTexto.jsx)
+  const resaltarTexto = (texto) => {
+    if (typeof texto !== 'string' || !palabraBuscada || palabraBuscada.trim() === "") return texto;
+
+    const escaparRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${escaparRegExp(palabraBuscada)})`, 'gi');
+
+    const partes = texto.split(regex);
+    return partes.map((parte, i) =>
+      regex.test(parte) ? (
+        <mark key={i} style={{ backgroundColor: '#fde047', color: 'black' }}>
+          {parte}
+        </mark>
+      ) : (
+        parte
+      )
+    );
+  };
+
+  // Helper para procesar el children de ReactMarkdown (que puede ser string o array)
+  const procesarChildren = (children) => {
+    if (Array.isArray(children)) {
+      return children.map((c, i) => (typeof c === 'string' ? <span key={i}>{resaltarTexto(c)}</span> : c));
+    }
+    return typeof children === 'string' ? resaltarTexto(children) : children;
+  };
+
   // Captura la selección del texto para el menú flotante
   const manejarSeleccionTexto = (e) => {
     const seleccion = window.getSelection();
     const texto = seleccion.toString().trim();
     if (texto.length > 0) {
       setTextoGlobalSeleccionado(texto);
-      setMenuPosicion({
-        x: e.clientX,
-        y: e.clientY - 40
-      });
+      setMenuPosicion({ x: e.clientX, y: e.clientY - 40 });
     } else {
       setMenuPosicion(null);
     }
@@ -155,7 +179,7 @@ export default function VisorAccesibleLTI() {
   return (
     <div 
       className="visor-container" 
-      style={{ 
+      style={{
         padding: '20px', 
         backgroundColor: colorFondo, 
         color: colorTexto, 
@@ -168,14 +192,12 @@ export default function VisorAccesibleLTI() {
       {pdfData ? (
         <>
           <div className="info-lti-header text-amber-50" style={{ marginBottom: '15px', color: "#0e0707" }}></div>
-          
           {reproduciendoSeleccion && (
             <button className="btn-detener-lectura" onClick={detenerTexto}>
               <MdStopCircle size={22} />
               <span>Detener lectura</span>
             </button>
           )}
-
           {menuPosicion && (
             <div className="menu-flotante" style={{ top: menuPosicion.y, left: menuPosicion.x }}>
               <button className="btn-menu-escuchar" onClick={() => leerTextoSeleccionado(textoGlobalSeleccionado)}>
@@ -186,7 +208,6 @@ export default function VisorAccesibleLTI() {
               </button>
             </div>
           )}
-
           <PanelHerramientas 
             aplicarTemaFondo={aplicarTemafondo} 
             aplicarTemaTexto={aplicarTematexto} 
@@ -202,34 +223,39 @@ export default function VisorAccesibleLTI() {
             borrarFiltros={borrarFiltros} 
             manejarBusqueda={manejarBusqueda} 
             enviarDato={enviarDato} 
-            enviarDatoFlashCars={enviarDatoFlashCars}
+            enviarDatoFlashCars={enviarDatoFlashCars} 
           />
-
           <div 
-            className="hoja-texto-container"
-            onMouseUp={manejarSeleccionTexto}
+            className="hoja-texto-container" 
+            onMouseUp={manejarSeleccionTexto} 
             style={{
-              backgroundColor: colorFondoPDF2,
-              color: colorTextoPDF2,
-              fontSize: `${tamanioLetra}px`,
-              padding: '30px',
-              borderRadius: '8px',
-              textAlign: 'left',
-              lineHeight: '1.6',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-              wordBreak: 'break-word'
+              backgroundColor: colorFondoPDF2, 
+              color: colorTextoPDF2, 
+              fontSize: `${tamanioLetra}px`, 
+              padding: '30px', 
+              borderRadius: '8px', 
+              textAlign: 'left', 
+              lineHeight: '1.6', 
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)', 
+              wordBreak: 'break-word' 
             }}
           >
-            <ReactMarkdown>
+            <ReactMarkdown
+              components={{
+                p: ({ children }) => <p>{procesarChildren(children)}</p>,
+                h1: ({ children }) => <h1>{procesarChildren(children)}</h1>,
+                h2: ({ children }) => <h2>{procesarChildren(children)}</h2>,
+                h3: ({ children }) => <h3>{procesarChildren(children)}</h3>,
+                li: ({ children }) => <li>{procesarChildren(children)}</li>,
+              }}
+            >
               {resultadoSeccionesTitleAndSections || pdfData}
             </ReactMarkdown>
           </div>
-
           <div id="contenedor-herramientas" style={{ marginTop: '40px' }}>
             <FlashCard />
             <Cuestionario />
           </div>
-
           {showExplicacionModal && (
             <div className="modal-overlay" onClick={() => setShowExplicacionModal(false)}>
               <div className="modal-content" onClick={e => e.stopPropagation()}>

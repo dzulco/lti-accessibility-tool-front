@@ -64,138 +64,151 @@ export const PdfProvider = ({ children }) => {
   const [resultadoTitleAndSections, setResultadoTitleAndSections] = useState({});
   const [resultadoSeccionesTitleAndSections, setResultadoSeccionesTitleAndSections] = useState('');
 
-	/**
- * 1. Algoritmo de extracción gráfica a Markdown (Calibrado)
- */
-const parsePdfItemsToMarkdown = (items, pageNum) => {
-  if (!items || items.length === 0) return '';
+  /**
+   * 1. Algoritmo de extracción gráfica a Markdown (Calibrado)
+   */
+  const parsePdfItemsToMarkdown = (items, pageNum) => {
+    if (!items || items.length === 0) return '';
 
-  const itemsFiltrados = items.filter((item) => {
-    const text = (item.str || '').trim();
-    if (!text) return false;
-    const y = Math.round(item.transform[5]);
+    const itemsFiltrados = items.filter((item) => {
+      const text = (item.str || '').trim();
+      if (!text) return false;
+      const y = Math.round(item.transform[5]);
 
-    if ((y > 780 || y < 50) && /^[-–—]?\s*\d+\s*[-–—]?$/.test(text)) return false; 
-    if (/^Página\s+\d+$/i.test(text)) return false;
-    if (pageNum > 1 && text.toLowerCase().includes('historia de la informática') && y > 730) return false;
+      if ((y > 780 || y < 50) && /^[-–—]?\s*\d+\s*[-–—]?$/.test(text)) return false; 
+      if (/^Página\s+\d+$/i.test(text)) return false;
+      if (pageNum > 1 && text.toLowerCase().includes('historia de la informática') && y > 730) return false;
 
-    return true;
-  });
+      return true;
+    });
 
-  if (itemsFiltrados.length === 0) return '';
+    if (itemsFiltrados.length === 0) return '';
 
-  const fontSizes = itemsFiltrados
-    .map((item) => Math.abs(item.transform[0] || item.height || 0))
-    .filter(Boolean)
-    .sort((a, b) => a - b);
+    const fontSizes = itemsFiltrados
+      .map((item) => Math.abs(item.transform[0] || item.height || 0))
+      .filter(Boolean)
+      .sort((a, b) => a - b);
 
-  const medianFontSize = fontSizes.length
-    ? fontSizes[Math.floor(fontSizes.length / 2)]
-    : 12;
+    const medianFontSize = fontSizes.length
+      ? fontSizes[Math.floor(fontSizes.length / 2)]
+      : 12;
 
-  const linesMap = new Map();
+    const linesMap = new Map();
 
-  itemsFiltrados.forEach((item) => {
-    const text = item.str;
-    const y = Math.round(item.transform[5]);
-    const fontSize = Math.abs(item.transform[0] || item.height || medianFontSize);
-    const width = item.width || (text.length * (fontSize * 0.5)); 
+    itemsFiltrados.forEach((item) => {
+      const text = item.str;
+      const y = Math.round(item.transform[5]);
+      const fontSize = Math.abs(item.transform[0] || item.height || medianFontSize);
+      const width = item.width || (text.length * (fontSize * 0.5)); 
 
-    let lineKey = Array.from(linesMap.keys()).find((k) => Math.abs(k - y) < 4);
-    if (lineKey === undefined) {
-      lineKey = y;
-      linesMap.set(lineKey, { y, fontSize, textItems: [] });
-    }
+      let lineKey = Array.from(linesMap.keys()).find((k) => Math.abs(k - y) < 4);
+      if (lineKey === undefined) {
+        lineKey = y;
+        linesMap.set(lineKey, { y, fontSize, textItems: [] });
+      }
 
-    linesMap.get(lineKey).textItems.push({ text, x: item.transform[4], width });
-  });
+      linesMap.get(lineKey).textItems.push({ text, x: item.transform[4], width });
+    });
 
-  const lines = Array.from(linesMap.values()).sort((a, b) => b.y - a.y);
-  let mdResult = '';
-  let lastY = null;
-  let inList = false;
+    const lines = Array.from(linesMap.values()).sort((a, b) => b.y - a.y);
+    let mdResult = '';
+    let lastY = null;
+    let inList = false;
 
-  lines.forEach((lineObj) => {
-    lineObj.textItems.sort((a, b) => a.x - b.x);
+    lines.forEach((lineObj) => {
+      lineObj.textItems.sort((a, b) => a.x - b.x);
 
-    let lineText = '';
-    for (let i = 0; i < lineObj.textItems.length; i++) {
-      const currentItem = lineObj.textItems[i];
-      lineText += currentItem.text;
-      
-      if (i < lineObj.textItems.length - 1) {
-        const nextItem = lineObj.textItems[i + 1];
-        const gap = nextItem.x - (currentItem.x + currentItem.width);
+      let lineText = '';
+      for (let i = 0; i < lineObj.textItems.length; i++) {
+        const currentItem = lineObj.textItems[i];
+        lineText += currentItem.text;
         
-        if (gap > lineObj.fontSize * 4) {
-          lineText += ' — ';
-        } else if (gap > lineObj.fontSize * 0.15) {
-          if (!lineText.endsWith(' ')) lineText += ' ';
+        if (i < lineObj.textItems.length - 1) {
+          const nextItem = lineObj.textItems[i + 1];
+          const gap = nextItem.x - (currentItem.x + currentItem.width);
+          
+          if (gap > lineObj.fontSize * 4) {
+            lineText += ' — ';
+          } else if (gap > lineObj.fontSize * 0.15) {
+            if (!lineText.endsWith(' ')) lineText += ' ';
+          }
         }
       }
-    }
 
-    lineText = lineText.replace(/\s+/g, ' ').trim();
-    if (!lineText) return;
+      lineText = lineText.replace(/\s+/g, ' ').trim();
+      if (!lineText) return;
 
-    const fontSize = lineObj.fontSize;
-    const currentY = lineObj.y;
-    const isNewBlock = lastY !== null && Math.abs(lastY - currentY) > medianFontSize * 1.6;
+      const fontSize = lineObj.fontSize;
+      const currentY = lineObj.y;
+      const isNewBlock = lastY !== null && Math.abs(lastY - currentY) > medianFontSize * 1.6;
 
-    // --- DETECCIÓN DE TÍTULOS Y SUBTÍTULOS ---
-    if (/^(18|19|20)\d{2}$/.test(lineText)) {
-      mdResult += `\n\n### ${lineText}\n\n`;
-      inList = false;
-    } 
-    // Título Principal (#)
-    else if (fontSize > medianFontSize * 1.45) {
-      mdResult += `\n\n# ${lineText}\n\n`;
-      inList = false;
-    } 
-    // Subtítulos (##) -> Aquí caerán "Calculador digital", "Segunda Guerra Mundial", etc., con doble salto garantizado
-    else if (fontSize > medianFontSize * 1.10) {
-      mdResult += `\n\n## ${lineText}\n\n`;
-      inList = false;
-    } 
-    // Título menor (###)
-    else if (fontSize > medianFontSize * 1.03) {
-      mdResult += `\n\n### ${lineText}\n\n`;
-      inList = false;
-    } 
-    else if (/^[•\-\*]\s|^\d+[\.\)]\s/.test(lineText)) {
-      const cleanText = lineText.replace(/^[•\-\*]\s*/, '');
-      mdResult += `\n* ${cleanText}`;
-      inList = true;
-    } 
-    else {
-      if (inList && !isNewBlock) {
-        mdResult += `\n  ${lineText}`;
-      } else if (isNewBlock) {
-        mdResult += `\n\n${lineText}`;
+      // --- DETECCIÓN DE TÍTULOS Y SUBTÍTULOS ---
+      if (/^(18|19|20)\d{2}$/.test(lineText)) {
+        mdResult += `\n\n### ${lineText}\n\n`;
         inList = false;
-      } else {
-        if (mdResult.endsWith('-')) {
-          mdResult = mdResult.slice(0, -1) + lineText;
+      } 
+      else if (fontSize > medianFontSize * 1.45) {
+        mdResult += `\n\n# ${lineText}\n\n`;
+        inList = false;
+      } 
+      else if (fontSize > medianFontSize * 1.10) {
+        mdResult += `\n\n## ${lineText}\n\n`;
+        inList = false;
+      } 
+      else if (fontSize > medianFontSize * 1.03) {
+        mdResult += `\n\n### ${lineText}\n\n`;
+        inList = false;
+      } 
+      else if (/^[•\-\*]\s|^\d+[\.\)]\s/.test(lineText)) {
+        const cleanText = lineText.replace(/^[•\-\*]\s*/, '');
+        mdResult += `\n* ${cleanText}`;
+        inList = true;
+      } 
+      else {
+        if (inList && !isNewBlock) {
+          mdResult += `\n  ${lineText}`;
+        } else if (isNewBlock) {
+          mdResult += `\n\n${lineText}`;
+          inList = false;
         } else {
-          mdResult += ` ${lineText}`;
+          if (mdResult.endsWith('-')) {
+            mdResult = mdResult.slice(0, -1) + lineText;
+          } else {
+            mdResult += ` ${lineText}`;
+          }
         }
       }
-    }
 
-    lastY = currentY;
-  });
+      lastY = currentY;
+    });
 
-  mdResult = mdResult.replace(/,([^\s])/g, ', $1');
+    mdResult = mdResult.replace(/,([^\s])/g, ', $1');
 
-  return mdResult.trim();
-};
+    return mdResult.trim();
+  };
+
   /**
    * 2. Descarga del PDF de Moodle y procesamiento en React
    */
   const cargarDocumento = async (url) => {
-    // Si ya se está cargando o es la misma URL que ya tenemos guardada, no hacemos la petición otra vez
     if (!url || cargando || pdfUrl === url) return; 
-    
+
+    // Seteo del título de la pestaña utilizando el nombre del archivo PDF
+    try {
+      const rutaLimpia = url.split("?")[0];
+      const nombreArchivo = rutaLimpia.split("/").pop();
+      if (nombreArchivo) {
+        const tituloFormateado = decodeURIComponent(nombreArchivo)
+          .replace(/\.[^/.]+$/, "")
+          .replace(/[-_]/g, " ");
+        document.title = `NEXA | ${tituloFormateado}`;
+      } else {
+        document.title = "NEXA";
+      }
+    } catch {
+      document.title = "NEXA";
+    }
+
     setCargando(true);
     setError(null);
 
@@ -220,7 +233,6 @@ const parsePdfItemsToMarkdown = (items, pageNum) => {
         
         const paginaMarkdown = parsePdfItemsToMarkdown(contenido.items, i);
         
-        // Línea divisoria y número de página en itálica
         markdownAcumulado += `\n\n---\n*Página ${i}*\n\n${paginaMarkdown}`;
       }
 
@@ -287,40 +299,30 @@ const parsePdfItemsToMarkdown = (items, pageNum) => {
   };
 
   /**
-   * 4. Lee automáticamente el parámetro pdfUrl de la URL en la carga inicial
+   * 4. Lee automáticamente los parámetros de la URL en la carga inicial
    */
   useEffect(() => {
-	  const queryParams = new URLSearchParams(window.location.search);
-	  
-	  // 1. Extraer los datos del usuario que el Back pasó en la redirección
-	  const userId = queryParams.get("userId");
-	  const user = queryParams.get("user") || queryParams.get("username") || queryParams.get("nombre");
-	  const email = queryParams.get("email");
-	  const course = queryParams.get("course");
-	  const section = queryParams.get("section");
-	  const urlDesdeParams = queryParams.get("pdfUrl");
+    const queryParams = new URLSearchParams(window.location.search);
 
-	  // 2. Guardarlos en el estado userData si vienen en la URL
-	  if (userId || user || email) {
-		setUserData({
-		  userId,
-		  user,
-		  email,
-		  course,
-		  section,
-		});
-	  }
+    const userId = queryParams.get("userId");
+    const user = queryParams.get("user") || queryParams.get("username") || queryParams.get("nombre");
+    const email = queryParams.get("email");
+    const course = queryParams.get("course");
+    const section = queryParams.get("section");
+    const urlDesdeParams = queryParams.get("pdfUrl");
 
-	  // 3. Cargar el PDF si viene la URL
-	  if (urlDesdeParams) {
-		cargarDocumento(urlDesdeParams);
-	  }
+    if (userId || user || email) {
+      setUserData({ userId, user, email, course, section });
+    }
 
-	  // (Opcional) Limpiar los parámetros de la barra de direcciones por seguridad/estética
-	  if (userId || urlDesdeParams) {
-		window.history.replaceState({}, document.title, window.location.pathname);
-	  }
-	}, []);
+    if (urlDesdeParams) {
+      cargarDocumento(urlDesdeParams);
+    }
+
+    if (userId || urlDesdeParams) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
 
   return (
     <PdfContext.Provider value={{

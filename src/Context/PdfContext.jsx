@@ -19,6 +19,10 @@ export const PdfProvider = ({ children }) => {
   const [visible, setVisible] = useState(false);
   const [mostrarFlashcards, setMostrarFlashcards] = useState(false);
 
+   
+    const [cargandoQuiz, setCargandoQuiz] = useState(false);
+    const [cargandoFlashcards, setCargandoFlashcards] = useState(false);
+  ; 
   // Estados restaurados con Mocks iniciales
   const [resultado, setResultado] = useState({
     "quiz": [
@@ -257,6 +261,7 @@ export const PdfProvider = ({ children }) => {
    */
   const enviarDatoFlashCars = async () => {
     if (!pdfData) return;
+     setCargandoFlashcards(true);
     try {
       const baseUrl = import.meta.env.VITE_BACKEND_URL || '';
       const urlTuApi = `${baseUrl}/api/v1/flashcards`;
@@ -267,6 +272,7 @@ export const PdfProvider = ({ children }) => {
       });
       if (responseFlashCars.ok) {
         const dataFlashCars = await responseFlashCars.json();
+         setCargandoFlashcards(false);
         setResultadoFlashCars(dataFlashCars);
         setMostrarFlashcards(true);
         setVisible(false);
@@ -279,6 +285,7 @@ export const PdfProvider = ({ children }) => {
   const enviarDato = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
     if (!pdfData) return;
+    setCargandoQuiz(true)
     try {
       const baseUrl = import.meta.env.VITE_BACKEND_URL || '';
       const urlTuApi = `${baseUrl}/api/v1/quiz`;
@@ -292,6 +299,7 @@ export const PdfProvider = ({ children }) => {
         setResultado(data);
         setVisible(true);
         setMostrarFlashcards(false);
+        setCargandoQuiz(false)
       }
     } catch (error) {
       console.error('Error al conectar con Spring Boot:', error);
@@ -346,7 +354,9 @@ export const PdfProvider = ({ children }) => {
       enviarDato,
       enviarDatoFlashCars,
       resultadoTitleAndSections,
-      resultadoSeccionesTitleAndSections
+      resultadoSeccionesTitleAndSections,
+      cargandoQuiz,
+      cargandoFlashcards,
     }}>
       {children}
     </PdfContext.Provider>

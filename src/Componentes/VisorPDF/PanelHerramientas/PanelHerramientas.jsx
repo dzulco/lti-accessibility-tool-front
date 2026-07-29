@@ -12,7 +12,7 @@ import {
   MdChevronRight,
   MdFontDownload,
 } from "react-icons/md";
-
+import Spinner from "react-bootstrap/Spinner";
 import ColorFondo from "./ColorFondo/ColorFondo";
 import HerramientaVoz from "../HerramientaVoz/HerramientaVoz";
 import TamañoLetra from "./LetraHerramienta/TamañoLetra";
@@ -34,12 +34,21 @@ export default function PanelHerramientas({
   cambiarLetra,
   borrarFiltros,
   manejarBusqueda,
-  enviarDato
+  enviarDato,
+  cargandoResumen: cargandoResumenProp // Recibimos la prop desde el padre
 }) {
   const [submenuAbierto, setSubmenuAbierto] = useState(null);
-  
 
-  const { enviarDatoFlashCars } = useContext(PdfContext);
+  const { 
+    enviarDatoFlashCars, 
+    cargandoQuiz, 
+    cargandoFlashcards, 
+    cargandoResumen: cargandoResumenContext,
+	pdfData
+  } = useContext(PdfContext);
+
+  // Usamos el estado que venga por prop o del contexto para mayor seguridad
+  const cargandoResumenFinal = cargandoResumenProp ?? cargandoResumenContext;
 
   return (
     <Offcanvas
@@ -219,53 +228,84 @@ export default function PanelHerramientas({
               )}
 
               {submenuAbierto === "herramientas" && (
-              <>
-
-                
-                  <Resumen solicitarResumen={solicitarResumen} />
-                 
-                  <hr style={{ margin: '20px 0' }} />
-                  
-   <div className="ia-card">
-
-    <h6 className="ia-title">
-        🤖 Herramientas Inteligentes
-    </h6>
-
-    <p className="ia-description">
-        Genere material de estudio automáticamente a partir del documento.
-    </p>
-
-   <button
-        type="button"
-        className="btn-ia btn-flashcards"
-        onClick={async (e) => {
-            e.preventDefault();
-            await enviarDatoFlashCars();
-            handleClose();
-
-           
-            
-        }}
-    >
-        ✨ Generar Flashcards
-    </button>
-        
-    <button 
+                <>
+                  {/* Integración del Spinner y estado para el Resumen */}
+                  <div className="ia-card" style={{ marginBottom: '20px' }}>
+                    <h6 className="ia-title">📄 Resumen Automático</h6>
+                    <p className="ia-description">Obtén un resumen rápido del documento actual.</p>
+                    <button
                       type="button"
-                      className="btn-ia btn-cuestionario"
+                      className="btn-ia btn-resumen"
+                      disabled={cargandoResumenFinal}
                       onClick={async (e) => {
                         e.preventDefault();
-                        await enviarDato(e);
+                        // Asumiendo que solicitarResumen recibe el texto completo del PDF o puedes pasarlo según tu lógica existente
+                        await solicitarResumen(pdfData); 
                         handleClose();
-
                       }}
-            
-    >
-        📝 Generar Cuestionario
-    </button>
+                    >
+                      {cargandoResumenFinal ? (
+                        <>
+                          <Spinner animation="border" size="sm" className="me-2" />
+                          Generando Resumen...
+                        </>
+                      ) : (
+                        "✨ Generar Resumen"
+                      )}
+                    </button>
+                  </div>
+                   
+                  <hr style={{ margin: '20px 0' }} />
+                   
+                  <div className="ia-card">
+                    <h6 className="ia-title">
+                        🤖 Herramientas Inteligentes
+                    </h6>
 
-</div>
+                    <p className="ia-description">
+                        Genere material de estudio automáticamente a partir del documento.
+                    </p>
+
+                    <button
+                      type="button"
+                      className="btn-ia btn-flashcards"
+                      disabled={cargandoFlashcards}
+                      onClick={async (e) => {
+                          e.preventDefault();
+                          await enviarDatoFlashCars();
+                          handleClose();
+                      }}
+                    >
+                        {cargandoFlashcards ? (
+                            <>
+                                <Spinner animation="border" size="sm" className="me-2" />
+                                Generando Flashcards...
+                            </>
+                        ) : (
+                            "✨ Generar Flashcards"
+                        )}
+                    </button>
+        
+                    <button 
+                      type="button"
+                      className="btn-ia btn-cuestionario"
+                      disabled={cargandoQuiz}
+                      onClick={async (e) => {
+                          e.preventDefault();
+                          await enviarDato(e);
+                          handleClose();
+                      }}
+                    >
+                        {cargandoQuiz ? (
+                            <>
+                                <Spinner animation="border" size="sm" className="me-2" />
+                                Generando Cuestionario...
+                            </>
+                        ) : (
+                            "📝 Generar Cuestionario"
+                        )}
+                    </button>
+                  </div>
                 </>
               )}
 

@@ -1,4 +1,4 @@
-import { useState, useContext } from 'react';
+import React, { useState, useContext, useRef, useMemo, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import PanelHerramientas from './PanelHerramientas/PanelHerramientas.jsx';
 import './style.css';
@@ -18,7 +18,7 @@ export default function VisorAccesibleLTI() {
     enviarDatoFlashCars, 
     menuAbierto, 
     setMenuAbierto, 
-    resultadoSeccionesTitleAndSections 
+    resultadoSeccionesTitleAndSections,
   } = useContext(PdfContext);
 
   const { colorFondo, colorTexto, setColorFondo } = useContext(ColorContext);
@@ -32,11 +32,14 @@ export default function VisorAccesibleLTI() {
   const [tipoLetra, setTipoLetra] = useState('Nunito');
   const [showExplicacionModal, setShowExplicacionModal] = useState(false);
   const [explicacionTexto, setExplicacionTexto] = useState('');
+  const [cargandoResumen, setCargandoResumen] = useState(false);
   const [cargandoExplicacion, setCargandoExplicacion] = useState(false);
   const [tipoModal, setTipoModal] = useState('explicacion');
-
-  // Función para resaltar la palabra buscada (migrada de HojaTexto.jsx)
-  const resaltarTexto = (texto) => {
+ 
+  const contenedorRef = useRef(null);
+ 
+ 
+  const resaltarTexto = useCallback((texto) => {
     if (typeof texto !== 'string' || !palabraBuscada || palabraBuscada.trim() === "") return texto;
 
     const escaparRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -52,26 +55,52 @@ export default function VisorAccesibleLTI() {
         parte
       )
     );
-  };
+  }, [palabraBuscada]);
 
-  // Helper para procesar el children de ReactMarkdown (que puede ser string o array)
-  const procesarChildren = (children) => {
-    if (Array.isArray(children)) {
-      return children.map((c, i) => (typeof c === 'string' ? <span key={i}>{resaltarTexto(c)}</span> : c));
+  // 2. Memorizamos el procesador de Children
+  const procesarChildren = useCallback((children) => {
+    if (typeof children === 'string') {
+      return resaltarTexto(children);
     }
-    return typeof children === 'string' ? resaltarTexto(children) : children;
-  };
+    if (Array.isArray(children)) {
+      return children.map((c, i) => (
+        typeof c === 'string' ? (
+          <React.Fragment key={i}>{resaltarTexto(c)}</React.Fragment>
+        ) : c
+      ));
+    }
+    return children;
+  }, [resaltarTexto]);
 
-  // Captura la selección del texto para el menú flotante
-  const manejarSeleccionTexto = (e) => {
+ 
+  const markdownComponents = useMemo(() => ({
+    p: ({ children }) => <p>{procesarChildren(children)}</p>,
+    h1: ({ children }) => <h1>{procesarChildren(children)}</h1>,
+    h2: ({ children }) => <h2>{procesarChildren(children)}</h2>,
+    h3: ({ children }) => <h3>{procesarChildren(children)}</h3>,
+    li: ({ children }) => <li>{procesarChildren(children)}</li>,
+  }), [procesarChildren]);
+
+
+  const manejarContextMenu = (e) => {
+    e.preventDefault(); 
     const seleccion = window.getSelection();
     const texto = seleccion.toString().trim();
-    if (texto.length > 0) {
-      setTextoGlobalSeleccionado(texto);
-      setMenuPosicion({ x: e.clientX, y: e.clientY - 40 });
-    } else {
-      setMenuPosicion(null);
+    
+    if (texto.length > 0 && seleccion.rangeCount > 0) {
+      const rango = seleccion.getRangeAt(0);
+      
+      
+      if (contenedorRef.current && contenedorRef.current.contains(rango.startContainer)) {
+        setTextoGlobalSeleccionado(texto);
+        setMenuPosicion({ 
+          x: e.clientX, 
+          y: e.clientY 
+        });
+        return;
+      }
     }
+    setMenuPosicion(null);
   };
 
   const solicitarExplicacion = async (texto) => {
@@ -99,6 +128,7 @@ export default function VisorAccesibleLTI() {
 
   const solicitarResumen = async (textoCompleto) => {
     setCargandoExplicacion(true);
+    setCargandoResumen(true);
     setTipoModal('resumen');
     try {
       const baseUrl = import.meta.env.VITE_BACKEND_URL || '';
@@ -117,6 +147,7 @@ export default function VisorAccesibleLTI() {
     } finally {
       setCargandoExplicacion(false);
       setMenuPosicion(null);
+      setCargandoResumen(false);
     }
   };
 
@@ -199,7 +230,15 @@ export default function VisorAccesibleLTI() {
             </button>
           )}
           {menuPosicion && (
-            <div className="menu-flotante" style={{ top: menuPosicion.y, left: menuPosicion.x }}>
+            <div 
+              className="menu-flotante" 
+              style={{ 
+                top: menuPosicion.y, 
+                left: menuPosicion.x, 
+                position: 'fixed',
+                zIndex: 1000 
+              }}
+            >
               <button className="btn-menu-escuchar" onClick={() => leerTextoSeleccionado(textoGlobalSeleccionado)}>
                 <span role="img" aria-label="megáfono">📢</span> Escuchar
               </button>
@@ -223,11 +262,13 @@ export default function VisorAccesibleLTI() {
             borrarFiltros={borrarFiltros} 
             manejarBusqueda={manejarBusqueda} 
             enviarDato={enviarDato} 
-            enviarDatoFlashCars={enviarDatoFlashCars} 
+            enviarDatoFlashCars={enviarDatoFlashCars}
+            cargandoResumen={cargandoResumen}
           />
           <div 
+            ref={contenedorRef}
             className="hoja-texto-container" 
-            onMouseUp={manejarSeleccionTexto} 
+            onContextMenu={manejarContextMenu}
             style={{
               backgroundColor: colorFondoPDF2, 
               color: colorTextoPDF2, 
@@ -237,18 +278,11 @@ export default function VisorAccesibleLTI() {
               textAlign: 'left', 
               lineHeight: '1.6', 
               boxShadow: '0 2px 8px rgba(0,0,0,0.1)', 
-              wordBreak: 'break-word' 
+              wordBreak: 'break-word',
+              position: 'relative'
             }}
           >
-            <ReactMarkdown
-              components={{
-                p: ({ children }) => <p>{procesarChildren(children)}</p>,
-                h1: ({ children }) => <h1>{procesarChildren(children)}</h1>,
-                h2: ({ children }) => <h2>{procesarChildren(children)}</h2>,
-                h3: ({ children }) => <h3>{procesarChildren(children)}</h3>,
-                li: ({ children }) => <li>{procesarChildren(children)}</li>,
-              }}
-            >
+            <ReactMarkdown components={markdownComponents}>
               {resultadoSeccionesTitleAndSections || pdfData}
             </ReactMarkdown>
           </div>

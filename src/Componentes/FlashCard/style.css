@@ -1,53 +1,130 @@
+/* =========================================
+   MODAL PERSONALIZADO (SIN BOOTSTRAP)
+   ========================================= */
 
-
-.flashcards-page {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 40px 25px;
+.fc-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.85);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 99999;
+    padding: 20px;
+    backdrop-filter: blur(4px);
 }
 
-.flash-header {
-    text-align: center;
-    margin-bottom: 45px;
+.fc-content {
+    background: #e5e7e9;
+    width: 95vw;
+    height: 90vh;
+    border-radius: 16px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
 }
 
-.flash-header h2 {
-    font-size: 2rem;
+/* Botón de cierre responsivo (chico y grande) */
+.fc-close-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    z-index: 10;
+    cursor: pointer;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
     color: #1e293b;
-    margin-bottom: 8px;
+    width: clamp(32px, 2.5vw, 42px);
+    height: clamp(32px, 2.5vw, 42px);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
 }
 
-.flash-header p {
+.fc-close-btn span {
+    font-size: clamp(14px, 1.2vw, 18px);
+    font-weight: 700;
+    line-height: 1;
+}
+
+.fc-close-btn:hover {
+    background: #ef4444;
+    color: white;
+    border-color: #ef4444;
+    transform: scale(1.1);
+    box-shadow: 0 6px 15px rgba(239, 68, 68, 0.3);
+}
+
+.fc-header {
+    padding: 25px 20px 20px;
+    text-align: center;
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.fc-header h2 {
+    font-size: 1.8rem;
+    color: #1e293b;
+    margin-bottom: 5px;
+    font-weight: 700;
+}
+
+.fc-header p {
     color: #64748b;
     font-size: 1rem;
+    margin: 0;
 }
 
+.fc-body-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 30px 40px;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+}
 
+.fc-body-scroll::-webkit-scrollbar {
+    width: 8px;
+}
+
+.fc-body-scroll::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+
+/* =========================================
+   ESTILOS DE LAS FLASHCARDS
+   ========================================= */
 
 .flash-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 290px));
-    justify-content: center;
-    gap: 28px;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 30px;
+    align-items: start;
 }
-
-
 
 .flashcard {
     width: 100%;
     height: 220px;
     perspective: 1200px;
     cursor: pointer;
+    transition: transform .25s;
 }
 
 .flash-inner {
     position: relative;
     width: 100%;
     height: 100%;
-
     transform-style: preserve-3d;
     -webkit-transform-style: preserve-3d;
-
     transition: transform .65s ease;
 }
 
@@ -55,259 +132,132 @@
     transform: rotateY(180deg);
 }
 
-
-
 .flash-front,
 .flash-back {
-
     position: absolute;
     inset: 0;
-
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-
     padding: 22px;
-
     border-radius: 18px;
-
     text-align: center;
-
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
-
     box-shadow: 0 12px 25px rgba(0, 0, 0, .12);
-
     overflow: hidden;
 }
 
 .flash-front {
-
     background: white;
     color: #1e293b;
-
 }
 
 .flash-back {
-
     background: linear-gradient(135deg, #2563eb, #4338ca);
     color: white;
-
     transform: rotateY(180deg);
-
 }
 
-
-
 .numero {
-
     font-size: .75rem;
     font-weight: bold;
     letter-spacing: 1px;
     text-transform: uppercase;
     margin-bottom: 14px;
     color: #64748b;
-
 }
 
 .flash-back .numero {
-
     color: #dbeafe;
-
 }
 
 .flash-front h4 {
-
     font-size: 1.1rem;
     line-height: 1.45;
     font-weight: 700;
-
     word-break: break-word;
-
 }
 
 .flash-back p {
-
     font-size: .92rem;
     line-height: 1.55;
-
     word-break: break-word;
-
-}
-
-
-
-.flashcard {
-
-    transition: transform .25s;
-
 }
 
 .flashcard:hover {
-
     transform: translateY(-6px);
-
 }
 
+/* =========================================
+   RESPONSIVO (Móviles y Tablets)
+   ========================================= */
 
+@media (max-width: 992px) {
+    .fc-content {
+        width: 100vw;
+        height: 100vh;
+        border-radius: 0;
+    }
 
-
-@media (max-width:992px) {
-
-    .flashcards-page {
-
-        padding: 30px 20px;
-
+    .fc-overlay {
+        padding: 0;
     }
 
     .flash-grid {
-
-        grid-template-columns: repeat(auto-fit, minmax(240px, 280px));
-
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
         gap: 22px;
-
     }
 
     .flashcard {
-
         height: 210px;
-
     }
 
     .flash-front,
     .flash-back {
-
         padding: 18px;
-
     }
 
     .flash-front h4 {
-
         font-size: 1rem;
-
     }
 
     .flash-back p {
-
         font-size: .88rem;
-
     }
-
 }
 
-
-
-
-@media (max-width:768px) {
-
-    .flashcards-page {
-
+@media (max-width: 768px) {
+    .fc-body-scroll {
         padding: 20px 15px;
-
     }
 
     .flash-grid {
-
         grid-template-columns: 1fr;
-
         justify-items: center;
-
         gap: 20px;
-
     }
 
     .flashcard {
-
-        width: 100%;
-        max-width: 280px;
+        max-width: 300px;
         height: 200px;
-
-    }
-
-    .flash-front,
-    .flash-back {
-
-        padding: 16px;
-
     }
 
     .flash-front h4 {
-
         font-size: .95rem;
-
     }
-
-    .flash-back p {
-
-        font-size: .82rem;
-        line-height: 1.45;
-
-    }
-
 }
 
-
-
-@media (max-width:480px) {
-
-    .flash-header h2 {
-
-        font-size: 1.45rem;
-
+@media (max-width: 480px) {
+    .fc-close-btn {
+        top: 10px;
+        right: 10px;
     }
-
-    .flash-header p {
-
-        font-size: .85rem;
-
-    }
-
-    .flashcard {
-
-        max-width: 260px;
-        height: 190px;
-
-    }
-
-    .flash-front,
-    .flash-back {
-
-        padding: 14px;
-
-        border-radius: 15px;
-
-    }
-
-    .flash-front h4 {
-
-        font-size: .9rem;
-
-    }
-
-    .flash-back p {
-
-        font-size: .78rem;
-
-    }
-
-    .numero {
-
-        font-size: .65rem;
-
-    }
-
 }
 
-
-
-
-@media (hover:none) {
-
+@media (hover: none) {
     .flashcard:hover {
-
         transform: none;
-
     }
-
 }

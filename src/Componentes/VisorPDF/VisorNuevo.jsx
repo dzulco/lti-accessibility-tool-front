@@ -32,13 +32,14 @@ export default function VisorAccesibleLTI() {
   const [tipoLetra, setTipoLetra] = useState('Nunito');
   const [showExplicacionModal, setShowExplicacionModal] = useState(false);
   const [explicacionTexto, setExplicacionTexto] = useState('');
+  
   const [cargandoResumen, setCargandoResumen] = useState(false);
-  const [cargandoExplicacion, setCargandoExplicacion] = useState(false);
+  const [cargandoExplicacionModal, setCargandoExplicacionModal] = useState(false);
+  const [cargandoResumenModal, setCargandoResumenModal] = useState(false);
   const [tipoModal, setTipoModal] = useState('explicacion');
  
   const contenedorRef = useRef(null);
- 
- 
+
   const resaltarTexto = useCallback((texto) => {
     if (typeof texto !== 'string' || !palabraBuscada || palabraBuscada.trim() === "") return texto;
 
@@ -57,7 +58,6 @@ export default function VisorAccesibleLTI() {
     );
   }, [palabraBuscada]);
 
-  // 2. Memorizamos el procesador de Children
   const procesarChildren = useCallback((children) => {
     if (typeof children === 'string') {
       return resaltarTexto(children);
@@ -72,7 +72,6 @@ export default function VisorAccesibleLTI() {
     return children;
   }, [resaltarTexto]);
 
- 
   const markdownComponents = useMemo(() => ({
     p: ({ children }) => <p>{procesarChildren(children)}</p>,
     h1: ({ children }) => <h1>{procesarChildren(children)}</h1>,
@@ -81,31 +80,27 @@ export default function VisorAccesibleLTI() {
     li: ({ children }) => <li>{procesarChildren(children)}</li>,
   }), [procesarChildren]);
 
-
   const manejarContextMenu = (e) => {
     e.preventDefault(); 
     const seleccion = window.getSelection();
-    const texto = seleccion.toString().trim();
+    const texto = seleccion ? seleccion.toString().trim() : "";
     
-    if (texto.length > 0 && seleccion.rangeCount > 0) {
-      const rango = seleccion.getRangeAt(0);
-      
-      
-      if (contenedorRef.current && contenedorRef.current.contains(rango.startContainer)) {
-        setTextoGlobalSeleccionado(texto);
-        setMenuPosicion({ 
-          x: e.clientX, 
-          y: e.clientY 
-        });
-        return;
-      }
+    if (texto.length > 0) {
+      setTextoGlobalSeleccionado(texto);
+      setMenuPosicion({ 
+        x: e.clientX, 
+        y: e.clientY 
+      });
+    } else {
+      setMenuPosicion(null);
     }
-    setMenuPosicion(null);
   };
 
   const solicitarExplicacion = async (texto) => {
-    setCargandoExplicacion(true);
+    setCargandoExplicacionModal(true);
     setTipoModal('explicacion');
+    setExplicacionTexto('');
+    setShowExplicacionModal(true);
     try {
       const baseUrl = import.meta.env.VITE_BACKEND_URL || '';
       const urlTuApi = `${baseUrl}/api/v1/explanation`;
@@ -116,20 +111,21 @@ export default function VisorAccesibleLTI() {
       });
       const data = await response.text();
       setExplicacionTexto(data || "No se recibió respuesta.");
-      setShowExplicacionModal(true);
     } catch (error) {
       console.error("Error al pedir explicación:", error);
-      alert("Error al conectar con el servidor.");
+      setExplicacionTexto("Error al conectar con el servidor.");
     } finally {
-      setCargandoExplicacion(false);
+      setCargandoExplicacionModal(false);
       setMenuPosicion(null);
     }
   };
 
   const solicitarResumen = async (textoCompleto) => {
-    setCargandoExplicacion(true);
+    setCargandoResumenModal(true);
     setCargandoResumen(true);
     setTipoModal('resumen');
+    setExplicacionTexto('');
+    setShowExplicacionModal(true);
     try {
       const baseUrl = import.meta.env.VITE_BACKEND_URL || '';
       const urlTuApi = `${baseUrl}/api/v1/summarize`;
@@ -140,12 +136,11 @@ export default function VisorAccesibleLTI() {
       });
       const data = await response.text();
       setExplicacionTexto(data || "No se recibió resumen.");
-      setShowExplicacionModal(true);
     } catch (error) {
       console.error("Error al pedir resumen:", error);
-      alert("Error al conectar con el servidor para resumir.");
+      setExplicacionTexto("Error al conectar con el servidor para resumir.");
     } finally {
-      setCargandoExplicacion(false);
+      setCargandoResumenModal(false);
       setMenuPosicion(null);
       setCargandoResumen(false);
     }
@@ -232,6 +227,7 @@ export default function VisorAccesibleLTI() {
           {menuPosicion && (
             <div 
               className="menu-flotante" 
+              onClick={(e) => e.stopPropagation()} 
               style={{ 
                 top: menuPosicion.y, 
                 left: menuPosicion.x, 
@@ -242,8 +238,8 @@ export default function VisorAccesibleLTI() {
               <button className="btn-menu-escuchar" onClick={() => leerTextoSeleccionado(textoGlobalSeleccionado)}>
                 <span role="img" aria-label="megáfono">📢</span> Escuchar
               </button>
-              <button className="btn-menu-explicar" onClick={() => solicitarExplicacion(textoGlobalSeleccionado)} disabled={cargandoExplicacion}>
-                <span role="img" aria-label="varita mágica">✨</span> {cargandoExplicacion && tipoModal === 'explicacion' ? "Procesando..." : "Explícamelo"}
+              <button className="btn-menu-explicar" onClick={() => solicitarExplicacion(textoGlobalSeleccionado)} disabled={cargandoExplicacionModal}>
+                <span role="img" aria-label="varita mágica">✨</span> {cargandoExplicacionModal && tipoModal === 'explicacion' ? " Generando..." : " Explícamelo"}
               </button>
             </div>
           )}
@@ -268,7 +264,7 @@ export default function VisorAccesibleLTI() {
           <div 
             ref={contenedorRef}
             className="hoja-texto-container" 
-            onContextMenu={manejarContextMenu}
+            onContextMenu={manejarContextMenu} 
             style={{
               backgroundColor: colorFondoPDF2, 
               color: colorTextoPDF2, 
@@ -291,11 +287,38 @@ export default function VisorAccesibleLTI() {
             <Cuestionario />
           </div>
           {showExplicacionModal && (
-            <div className="modal-overlay" onClick={() => setShowExplicacionModal(false)}>
+            <div className="modal-overlay" onClick={() => !cargandoExplicacionModal && !cargandoResumenModal && setShowExplicacionModal(false)}>
               <div className="modal-content" onClick={e => e.stopPropagation()}>
-                <h3>{tipoModal === 'resumen' ? 'Resumen del documento' : 'Explicación del fragmento'}</h3>
-                <p style={{ whiteSpace: 'pre-wrap' }}>{explicacionTexto}</p>
-                <button onClick={() => setShowExplicacionModal(false)}>Cerrar</button>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                  <h3 style={{ margin: 0 }}>
+                    {tipoModal === 'resumen' ? 'Resumen del documento' : 'Explicación del fragmento'}
+                  </h3>
+                  <button 
+                    onClick={() => setShowExplicacionModal(false)}
+                    style={{ 
+                      background: 'transparent', 
+                      border: 'none', 
+                      fontSize: '1.25rem', 
+                      cursor: 'pointer', 
+                      color: '#64748b',
+                      padding: '4px 8px',
+                      borderRadius: '4px'
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+                
+                {(cargandoExplicacionModal || cargandoResumenModal) ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 0', gap: '15px' }}>
+                    <div className="spinner-explicacion"></div>
+                    <p style={{ color: '#64748b', fontSize: '0.95rem' }}>
+                      {tipoModal === 'resumen' ? 'Generando resumen inteligente...' : 'Analizando y redactando explicación...'}
+                    </p>
+                  </div>
+                ) : (
+                  <p style={{ whiteSpace: 'pre-wrap' }}>{explicacionTexto}</p>
+                )}
               </div>
             </div>
           )}

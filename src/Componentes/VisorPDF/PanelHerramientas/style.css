@@ -57,7 +57,7 @@
 
 .menu-item {
     width: 100%;
-    background: #ffffff;
+    background: rgb(245, 243, 241);
     border: 1px solid transparent;
     /* Borde invisible pero presente para evitar saltos */
     display: flex;

@@ -10,7 +10,7 @@ const TamañoLetra = ({ tamaño, setTamaño, aplicarTemaTexto, colorTextoPDF }) 
         Tamaño de letra
     </h5>
 
-    <div className="tamaño-container">
+    <div className="panel">
 
         <div className="botones-tamano ">
 

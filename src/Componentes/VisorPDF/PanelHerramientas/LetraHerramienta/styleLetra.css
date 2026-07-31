@@ -1,6 +1,6 @@
 .grupo-control {
-    background: #f1eeee;
-    border: 2px solid #e5e7eb;
+background: #fff;
+    border: 1px solid #d8e0e7;
     border-radius: 16px;
     padding: 24px;
     margin-bottom: 20px;
@@ -14,7 +14,7 @@
     margin: 0;
     font-size: 1rem;
     font-weight: 700;
-    color: #1f2937;
+    color: #060707;
     text-transform: uppercase;
     letter-spacing: .8px;
     display: flex;
@@ -25,6 +25,8 @@
     display: flex;
     flex-direction: column;
     gap: 20px;
+background: #fff;
+    /* Elimina cualquier fondo azul heredado */
 }
 
 .botones-tamano {
@@ -32,6 +34,7 @@
     justify-content: center;
     align-items: center;
     gap: 20px;
+    background: #fff;
 }
 
 .boton {
@@ -39,7 +42,7 @@
     height: 52px;
     border: none;
     border-radius: 14px;
-    background: #010613;
+    background: #1f2937;
     color: white;
     font-size: 1.15rem;
     font-weight: bold;
@@ -48,9 +51,9 @@
 }
 
 .boton:hover {
-    background: #1d4ed8;
+    background: #374151;
     transform: translateY(-3px);
-    box-shadow: 0 8px 20px rgba(37, 99, 235, .35);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
 }
 
 .boton:active {
@@ -63,7 +66,7 @@
     font-size: 1.2rem;
     font-weight: 700;
     color: #111827;
-    background: #f3f4f6;
+background: #fff;
     padding: 10px;
     border-radius: 12px;
 }
@@ -72,7 +75,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #f9fafb;
+    background: #fff;
     border: 1px solid #e5e7eb;
     border-radius: 14px;
     padding: 16px 18px;
@@ -80,18 +83,19 @@
 
 .selector-texto label {
     margin: 0;
-    color: #555f6e;
+    color: #1b64d1;
     font-weight: 600;
     font-size: .92rem;
     display: flex;
     align-items: center;
+    background: rgb(245, 243, 241);
 }
 
 input[type="color"] {
     width: 44px;
     height: 44px;
     border: none;
-    background: none;
+    background:#111827;
     cursor: pointer;
     transition: .25s;
 }
@@ -114,7 +118,6 @@ input[type="color"]:hover {
 ========================== */
 
 @media (max-width: 992px) {
-
     .grupo-control {
         padding: 20px;
         gap: 18px;
@@ -154,17 +157,17 @@ input[type="color"]:hover {
     }
 }
 
-
 /* ==========================
         CELULARES
 ========================== */
 
 @media (max-width: 768px) {
-
     .grupo-control {
         padding: 16px;
         gap: 16px;
         border-radius: 14px;
+        display:flex;
+        flex-direction: column;
     }
 
     .grupo-control h5 {
@@ -176,6 +179,8 @@ input[type="color"]:hover {
     .botones-tamano {
         gap: 12px;
         flex-wrap: wrap;
+        display:flex;
+        flex-direction: column;
     }
 
     .boton {
@@ -197,7 +202,7 @@ input[type="color"]:hover {
         gap: 14px;
         text-align: center;
         padding: 15px;
-        color:#010613;
+        color: #1f2937;
     }
 
     .selector-texto label {
@@ -205,7 +210,7 @@ input[type="color"]:hover {
         align-items: center;
         justify-content: center;
         font-size: .88rem;
-        color:#010613;
+        color: #1f2937;
     }
 
     input[type="color"] {
@@ -214,19 +219,19 @@ input[type="color"]:hover {
     }
 }
 
-
 /* ==========================
     CELULARES PEQUEÑOS
 ========================== */
 
 @media (max-width: 480px) {
- .tamaño-container{
-    background-color: #e5e7eb;
- }
+    .tamaño-container {
+        background-color: transparent;
+    }
+
     .grupo-control {
         padding: 14px;
         gap: 14px;
-        background-color: #e5e7eb;
+        background: #fff;
     }
 
     .grupo-control h5 {
@@ -252,8 +257,8 @@ input[type="color"]:hover {
     .selector-texto {
         padding: 12px;
         border-radius: 12px;
-        background-color: #e5e7eb;
-        color:#010613;
+        background: #fff;
+        color: #1f2937;
     }
 
     .selector-texto label {
@@ -264,4 +269,7 @@ input[type="color"]:hover {
         width: 38px;
         height: 38px;
     }
+}
+.panel{
+    background: #DAE9F0;
 }

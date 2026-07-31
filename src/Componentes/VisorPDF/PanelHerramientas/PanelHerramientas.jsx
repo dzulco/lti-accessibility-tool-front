@@ -35,7 +35,7 @@ export default function PanelHerramientas({
   borrarFiltros,
   manejarBusqueda,
   enviarDato,
-  cargandoResumen: cargandoResumenProp // Recibimos la prop desde el padre
+  cargandoResumen: cargandoResumenProp 
 }) {
   const [submenuAbierto, setSubmenuAbierto] = useState(null);
 
@@ -47,7 +47,6 @@ export default function PanelHerramientas({
 	pdfData
   } = useContext(PdfContext);
 
-  // Usamos el estado que venga por prop o del contexto para mayor seguridad
   const cargandoResumenFinal = cargandoResumenProp ?? cargandoResumenContext;
 
   return (
@@ -118,20 +117,9 @@ export default function PanelHerramientas({
             <MdChevronRight className="flecha" />
           </button>
 
-          <button
-            className={`menu-item ${submenuAbierto === "texto" ? "activo" : ""}`}
-            onClick={() => setSubmenuAbierto("texto")}
-          >
-            <div className="menu-info">
-              <MdTextFields className="menu-icono" />
-              <div>
-                <h6>Tamaño del texto</h6>
-                <small>Fuente y tamaño</small>
-              </div>
-            </div>
-            <MdChevronRight className="flecha" />
-          </button>
-         
+       
+          
+           
           <button
             className={`menu-item ${submenuAbierto === "tipografia" ? "activo" : ""}`}
             onClick={() => setSubmenuAbierto("tipografia")}
@@ -139,8 +127,8 @@ export default function PanelHerramientas({
             <div className="menu-info">
               <MdFontDownload className="menu-icono" />
               <div>
-                <h6>Tipografía</h6>
-                <small>Familia tipográfica</small>
+                <h6>Modo Dislexia</h6>
+                <small> Cambia la familia tipográfica</small>
               </div>
             </div>
             <MdChevronRight className="flecha" />
@@ -199,7 +187,7 @@ export default function PanelHerramientas({
                 {submenuAbierto === "herramientas" && "Herramientas"}
                 {submenuAbierto === "voz" && "Lectura"}
                 {submenuAbierto === "apariencia" && "Apariencia"}
-                {submenuAbierto === "texto" && "Tamaño del texto"}
+              
                 {submenuAbierto === "tipografia" && "Tipografía"}
                 {submenuAbierto === "borrarPreferencias" && "Borrar Preferencias"}
                 {submenuAbierto === "buscar" && "Buscar"}
@@ -215,10 +203,18 @@ export default function PanelHerramientas({
               )}
 
               {submenuAbierto === "apariencia" && (
-                <ColorFondo
+               <>
+               <ColorFondo
                   aplicarTemaPDF={aplicarTemaPDF}
                   aplicarTemaFondo={aplicarTemaFondo}
                 />
+                <TamañoLetra
+                  tamaño={tamanioLetra}
+                  setTamaño={setTamanioLetra}
+                  aplicarTemaTexto={aplicarTemaTexto}
+                  aplicarTemaPDF={aplicarTemaPDF}
+                  />
+                  </>
               )}
 
               {submenuAbierto === "tipografia" && (
@@ -309,14 +305,7 @@ export default function PanelHerramientas({
                 </>
               )}
 
-              {submenuAbierto === "texto" && (
-                <TamañoLetra
-                  tamaño={tamanioLetra}
-                  setTamaño={setTamanioLetra}
-                  aplicarTemaTexto={aplicarTemaTexto}
-                  aplicarTemaPDF={aplicarTemaPDF}
-                />
-              )}
+              
               
               {submenuAbierto === "buscar" && (
                 <Buscar manejarBusqueda={manejarBusqueda} />

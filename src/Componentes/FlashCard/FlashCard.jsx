@@ -6,7 +6,7 @@ function FlashCard() {
     const { resultadoFlashCars, mostrarFlashcards, setMostrarFlashcards } = useContext(PdfContext);
     const [tarjetasVolteadas, setTarjetasVolteadas] = useState([]);
 
-    // Si no está activo el modal o no hay resultados, no renderizamos nada
+  
     if (!mostrarFlashcards || !resultadoFlashCars) return null;
 
     const manejarClickTarjeta = (indice) => {
@@ -26,18 +26,17 @@ function FlashCard() {
     return (
         <div className="fc-overlay" onClick={handleCerrarModal}>
             <div className="fc-content" onClick={e => e.stopPropagation()}>
-                {/* Botón flotante para cerrar */}
+           
                 <button className="fc-close-btn" onClick={handleCerrarModal} title="Cerrar">
                     <span>✕</span>
                 </button>
                 
-                {/* Cabecera del modal */}
+          
                 <div className="fc-header">
                     <h2>📚 Flashcards Inteligentes</h2>
                     <p>Haga clic sobre una tarjeta para ver la respuesta.</p>
                 </div>
 
-                {/* Contenedor con scroll para las tarjetas */}
                 <div className="fc-body-scroll">
                     <div className="flash-grid">
                         {resultadoFlashCars.map((tarjeta, indice) => {

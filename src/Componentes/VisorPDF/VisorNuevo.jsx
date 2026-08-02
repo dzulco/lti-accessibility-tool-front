@@ -8,6 +8,7 @@ import { MdStopCircle } from "react-icons/md";
 import './styleMenu.css';
 import FlashCard from '../FlashCard/FlashCard.jsx';
 import Cuestionario from '../Cuestionario/Cuestionario.jsx';
+import Explicacion from '../Explicar/Explicar.jsx';
 
 export default function VisorAccesibleLTI() {
   const { 
@@ -283,42 +284,62 @@ export default function VisorAccesibleLTI() {
             </ReactMarkdown>
           </div>
           <div id="contenedor-herramientas" style={{ marginTop: '40px' }}>
+            <Explicacion solicitarExplicacion={solicitarExplicacion} />
             <FlashCard />
             <Cuestionario />
           </div>
+
           {showExplicacionModal && (
-            <div className="modal-overlay" onClick={() => !cargandoExplicacionModal && !cargandoResumenModal && setShowExplicacionModal(false)}>
-              <div className="modal-content" onClick={e => e.stopPropagation()}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                  <h3 style={{ margin: 0 }}>
-                    {tipoModal === 'resumen' ? 'Resumen del documento' : 'Explicación del fragmento'}
-                  </h3>
-                  <button 
-                    onClick={() => setShowExplicacionModal(false)}
-                    style={{ 
-                      background: 'transparent', 
-                      border: 'none', 
-                      fontSize: '1.25rem', 
-                      cursor: 'pointer', 
-                      color: '#64748b',
-                      padding: '4px 8px',
-                      borderRadius: '4px'
-                    }}
-                  >
-                    ✕
-                  </button>
-                </div>
+            <div 
+              className="cuestionario-overlay" 
+              onClick={() => !cargandoExplicacionModal && !cargandoResumenModal && setShowExplicacionModal(false)}
+            >
+              <div className="cuestionario-content" onClick={e => e.stopPropagation()}>
+                {/* Botón flotante para cerrar en la esquina */}
+                <button 
+                  className="cuestionario-close-btn" 
+                  onClick={() => !cargandoExplicacionModal && !cargandoResumenModal && setShowExplicacionModal(false)} 
+                  title="Cerrar"
+                >
+                  ✕
+                </button>
                 
-                {(cargandoExplicacionModal || cargandoResumenModal) ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 0', gap: '15px' }}>
-                    <div className="spinner-explicacion"></div>
-                    <p style={{ color: '#64748b', fontSize: '0.95rem' }}>
-                      {tipoModal === 'resumen' ? 'Generando resumen inteligente...' : 'Analizando y redactando explicación...'}
-                    </p>
+                {/* Cabecera */}
+                <div className="cuestionario-header">
+                  <h2>{tipoModal === 'resumen' ? '📖 Resumen del documento' : '✨ Explicación del fragmento'}</h2>
+                  <p>
+                    {tipoModal === 'resumen' 
+                      ? 'Resumen inteligente generado a partir del documento.' 
+                      : 'Detalles y desglose del fragmento o documento seleccionado.'}
+                  </p>
+                </div>
+
+                {/* Cuerpo con scroll personalizado */}
+                <div className="cuestionario-body-scroll">
+                  <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+                    {(cargandoExplicacionModal || cargandoResumenModal) ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 0', gap: '15px' }}>
+                        <div className="spinner-explicacion"></div>
+                        <p style={{ color: '#64748b', fontSize: '1rem', fontWeight: 500 }}>
+                          {tipoModal === 'resumen' ? 'Generando resumen inteligente...' : 'Analizando y redactando explicación...'}
+                        </p>
+                      </div>
+                    ) : (
+                      <div style={{ 
+                        background: 'white', 
+                        borderRadius: '16px', 
+                        padding: '30px', 
+                        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.08)',
+                        color: '#1f2937',
+                        lineHeight: '1.7',
+                        fontSize: '1.05rem',
+                        whiteSpace: 'pre-wrap' 
+                      }}>
+                        {explicacionTexto}
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <p style={{ whiteSpace: 'pre-wrap' }}>{explicacionTexto}</p>
-                )}
+                </div>
               </div>
             </div>
           )}

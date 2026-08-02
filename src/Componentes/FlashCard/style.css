@@ -1,6 +1,4 @@
-/* =========================================
-   MODAL PERSONALIZADO (SIN BOOTSTRAP)
-   ========================================= */
+
 
 .fc-overlay {
     position: fixed;
@@ -29,7 +27,7 @@
     overflow: hidden;
 }
 
-/* Botón de cierre responsivo (chico y grande) */
+
 .fc-close-btn {
     position: absolute;
     top: 15px;
@@ -100,9 +98,6 @@
     border-radius: 10px;
 }
 
-/* =========================================
-   ESTILOS DE LAS FLASHCARDS
-   ========================================= */
 
 .flash-grid {
     display: grid;
@@ -190,9 +185,6 @@
     transform: translateY(-6px);
 }
 
-/* =========================================
-   RESPONSIVO (Móviles y Tablets)
-   ========================================= */
 
 @media (max-width: 992px) {
     .fc-content {

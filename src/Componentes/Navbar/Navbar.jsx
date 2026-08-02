@@ -29,7 +29,6 @@ const Navbar = () => {
       </button>
 
       <div className={`nav-actions ${menuOpen ? 'open' : ''}`}>
-      
         <button
           className="boton-menu-herramientas"
           onClick={() => {
@@ -50,14 +49,15 @@ const Navbar = () => {
           🎯 Modo Concentrado
         </button>
 
-        <Concentrado
-          isOpen={showModal}
-          onClose={() => setShowModal(false)}
-          pdfData={pdfData}
-        />
-
         {userData && <User userData={userData}/>}
       </div>
+
+      {/* 🚀 MOVIMOS EL MODAL AFUERA DE .nav-actions PARA QUE NO SE VEA AFECTADO POR LA ANIMACIÓN DEL MENÚ MÓVIL */}
+      <Concentrado
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        pdfData={pdfData}
+      />
     </nav>
   );
 };

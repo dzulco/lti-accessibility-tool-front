@@ -21,17 +21,17 @@ const NexaHerramienta = () => {
         "La accesibilidad se entiende mejor cuando se vive."
       </p>
 
-      {/* Contenedor del Simulador */}
-      <div className="max-w-2xl mx-auto bg-neutral-950 border border-neutral-800 rounded-2xl p-6 md:p-8 shadow-inner relative z-10">
+     
+      <div className="max-w-2xl mx-auto bg-neutral-950  rounded-2xl p-6 md:p-8 shadow-inner relative z-10">
         
-        {/* Título de la actividad */}
-        <h3 className="text-xl md:text-2xl font-bold text-white mb-6 border-b border-neutral-800 pb-4 flex items-center justify-center gap-3 text-center">
+       
+        <h3 className="text-xl md:text-2xl font-bold text-white mb-6  pb-4 flex md:flex-col items-center justify-center gap-3 text-center">
           Probar Simulador de la herramienta de accesibilidad
         </h3>
 
-        {/* Lista de actividades */}
+   
         <ul className="space-y-4">
-          <li className="flex items-center justify-between p-4 bg-neutral-900 border border-neutral-800 rounded-xl hover:border-blue-500/50 hover:bg-neutral-800/60 transition-all duration-300 group/item shadow-sm">
+          <li className="flex flex-col md:flex-row items-center justify-between p-4 bg-neutral-900  rounded-xl hover:border-blue-500/50 hover:bg-neutral-800/60 transition-all duration-300 group/item shadow-sm">
             
             <div className="flex items-center space-x-3">
               <img 
@@ -48,7 +48,7 @@ const NexaHerramienta = () => {
               </a>
             </div>
 
-            <span className="bg-blue-500/10 text-blue-400 border border-blue-500/20 text-xs px-3 py-1.5 rounded-full font-medium tracking-wide">
+            <span className="bg-blue-500/10 text-blue-400   text-xs px-3 py-1.5 rounded-full font-medium tracking-wide">
               Herramienta LTI
             </span>
 

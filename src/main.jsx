@@ -24,14 +24,3 @@ enableMocking().then(() => {
         </StrictMode>,
     )
 })
-
-// Polyfill para Safari / navegadores sin soporte de Math.sumPrecise
-if (typeof Math.sumPrecise !== 'function') {
-    Math.sumPrecise = function (numbers) {
-        let sum = 0;
-        for (const n of numbers) {
-            sum += Number(n) || 0;
-        }
-        return sum;
-    };
-}
